@@ -76,12 +76,11 @@ type MeadowApp() =
     //    Threading.Thread.Sleep(int duration) |> ignore
     //    led.Stop |> ignore
 
-    let baselineValue = Nullable (Units.Concentration(650.0, Units.Concentration.UnitType.PartsPerMillion))
+    let warningThreshold = Nullable (Units.Concentration(750.0, Units.Concentration.UnitType.PartsPerMillion))
+    let dangerThreshold = Nullable (Units.Concentration(1500.0, Units.Concentration.UnitType.PartsPerMillion))
 
-    do Thread.Sleep(4000)
-    do Console.WriteLine "Starting CO2 Comparison"
     let toggleRelays duration =
-        while (latestCO2Value.Value.ToDecimal > baselineValue.Value) do 
+        while latestCO2Value.Value.PartsPerMillion > warningThreshold.Value.PartsPerMillion do 
             relayGreen.IsOn |> ignore
             relayOrange.IsOn |> ignore
             Thread.Sleep(int (duration / 2)) |> ignore
