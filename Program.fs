@@ -5,23 +5,21 @@ open Meadow
 open Meadow.Foundation
 open Meadow.Foundation.Leds
 open Meadow.Foundation.Sensors.Atmospheric
-open Meadow.Foundation.Graphics
-open Meadow.Foundation.Displays.TftSpi
+
 
 type MeadowApp() =
     inherit App<F7Micro, MeadowApp>()
 
-    // set up relays
-
-    let relayGreen = Relays.Relay(MeadowApp.Device, MeadowApp.Device.Pins.D05)
-    let relayOrange = Relays.Relay(MeadowApp.Device, MeadowApp.Device.Pins.D06)
-
     // set up sensor
     let i2c = MeadowApp.Device.CreateI2cBus(Hardware.I2cBusSpeed.Standard)
-
     let sensor = new Ccs811 (i2c)
-    let mutable latestCO2Value = System.Nullable()
+
+    // set up thresholds to compare against observer readings
+    let warningThreshold = Nullable (Units.Concentration(750.0, Units.Concentration.UnitType.PartsPerMillion))
+    let dangerThreshold = Nullable (Units.Concentration(1500.0, Units.Concentration.UnitType.PartsPerMillion))
     
+    let mutable latestCO2Value = System.Nullable()
+
     let consumer = Ccs811.CreateObserver(fun result -> 
         let newValue = match result.New with | (new_val, _) -> new_val
         latestCO2Value <- newValue
@@ -30,39 +28,6 @@ type MeadowApp() =
     let s = sensor.Subscribe(consumer)
 
     do sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
-
-    // set up display
-    //let display = new Gc9a01 (MeadowApp.Device, 
-    //                            MeadowApp.Device.CreateSpiBus(48000L),  
-    //                            MeadowApp.Device.Pins.D02,  
-    //                            MeadowApp.Device.Pins.D01,  
-    //                            MeadowApp.Device.Pins.D00)
-
-    //let displaywidth = Convert.ToInt32(display.Width)
-    //let displayheight = Convert.ToInt32(display.Height)
-    //let originx = displaywidth / 2
-    //let originy = displayheight / 2
-
-    //let graphics = GraphicsLibrary(display)
-    //do Console.WriteLine "Initializing display"
-    //do graphics.Clear(true)
-
-    //let loadscreen (firstcolor: Color) (secondcolor: Color) = 
-    //            graphics.CurrentFont <- Font12x16()
-    //            graphics.DrawCircle(originx, originy, 120, firstcolor, true)
-    //            graphics.DrawCircle(originx, originy, 105, Color.Black, true)
-    //            graphics.DrawCircle(originx, originy, 100, secondcolor, true)
-    //            graphics.DrawRoundedRectangle(32, 98, 175, 44, 8, Color.Black, true)
-    //            graphics.DrawText(40, 102, $"{}", Color.White, GraphicsLibrary.ScaleFactor.X1)
-    //            Console.WriteLine $"{consumer.OnNext}"
-
-    //do Console.WriteLine "loading screen..."
-    //do loadscreen Color.Orange Color.Blue
-    //do graphics.Show()
-
-    //do Console.WriteLine "loading screen second time..."
-    //do loadscreen Color.Blue Color.Orange
-    //do graphics.Show()
 
     // boilerplate LED stuff
     let led =
@@ -76,18 +41,23 @@ type MeadowApp() =
     //    Threading.Thread.Sleep(int duration) |> ignore
     //    led.Stop |> ignore
 
-    let warningThreshold = Nullable (Units.Concentration(750.0, Units.Concentration.UnitType.PartsPerMillion))
-    let dangerThreshold = Nullable (Units.Concentration(1500.0, Units.Concentration.UnitType.PartsPerMillion))
+    // set up relays
+    let relayGreen = Relays.Relay(MeadowApp.Device, MeadowApp.Device.Pins.D05)
 
     let toggleRelays duration =
         while latestCO2Value.Value.PartsPerMillion > warningThreshold.Value.PartsPerMillion do 
-            relayGreen.IsOn |> ignore
-            relayOrange.IsOn |> ignore
-            Thread.Sleep(int (duration / 2)) |> ignore
-            relayGreen.Toggle() |> ignore
-            relayOrange.Toggle() |> ignore
-            Thread.Sleep(int (duration / 2)) |> ignore
+            //Console.WriteLine $"latest CO2 Value: {latestCO2Value.Value.PartsPerMillion}, warning theshold {warningThreshold.Value.PartsPerMillion}"
+            relayGreen.Toggle()
+            Thread.Sleep(int (duration / 2))
+            relayGreen.Toggle()
+            Thread.Sleep(int (duration / 2))
 
+    // TODO: put this on an event
+    do Thread.Sleep(5000)
+    do Console.WriteLine $"latest CO2 Value: {latestCO2Value.Value.PartsPerMillion}, warning theshold {warningThreshold.Value.PartsPerMillion}"
+    do toggleRelays 2000
+    do Thread.Sleep(10000)
+    do Console.WriteLine $"latest CO2 Value: {latestCO2Value.Value.PartsPerMillion}, warning theshold {warningThreshold.Value.PartsPerMillion}"
     do toggleRelays 2000
 
     //let cycleColors  (firstColor: Color) duration =
