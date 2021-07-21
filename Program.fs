@@ -5,60 +5,69 @@ open Meadow
 open Meadow.Foundation
 open Meadow.Foundation.Leds
 open Meadow.Foundation.Sensors.Atmospheric
-
+open Meadow.Foundation.Graphics
+open Meadow.Foundation.Displays.TftSpi
 
 type MeadowApp() =
     inherit App<F7Micro, MeadowApp>()
 
-    // boilerplate LED stuff
-    let led =
-        RgbPwmLed(MeadowApp.Device, MeadowApp.Device.Pins.OnboardLedRed, MeadowApp.Device.Pins.OnboardLedGreen,
+    let led = RgbPwmLed(MeadowApp.Device, MeadowApp.Device.Pins.OnboardLedRed, MeadowApp.Device.Pins.OnboardLedGreen,
                       MeadowApp.Device.Pins.OnboardLedBlue, 3.3f, 3.3f, 3.3f,
                       Peripherals.Leds.IRgbLed.CommonType.CommonAnode)
-    do led.Stop |> ignore
 
-    // set up sensor
     let i2c = MeadowApp.Device.CreateI2cBus(Hardware.I2cBusSpeed.Standard)
     let sensor = new Ccs811 (i2c)
 
-    let warningThreshold = Nullable (Units.Concentration(750.0, Units.Concentration.UnitType.PartsPerMillion))
-    
-    let mutable latestCO2Value =  Nullable (Units.Concentration(750.0, Units.Concentration.UnitType.PartsPerMillion))
+    let triggerThreshold = Nullable (Units.Concentration(750.0, Units.Concentration.UnitType.PartsPerMillion))
+    let reductionThreshold = Nullable (Units.Concentration(650.0, Units.Concentration.UnitType.PartsPerMillion))
+    let mutable latestCO2Value =  Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
 
-    let mutable onboardLEDColor = 
-        match latestCO2Value.Value.PartsPerMillion with  
-        | i when i > 1500.0 -> Color.Red
-        | i when i > 750.0 && i <= 1500.0 -> Color.OrangeRed
-        | i when i > 650.0 && i <= 750.0 -> Color.Yellow
-        | _ -> Color.Green
-    
-    // set up ventilation
+    let display = new Gc9a01 (MeadowApp.Device, 
+                            MeadowApp.Device.CreateSpiBus(48000L),  
+                            MeadowApp.Device.Pins.D02,  
+                            MeadowApp.Device.Pins.D01,  
+                            MeadowApp.Device.Pins.D00)
+
+    let displaywidth = Convert.ToInt32(display.Width)
+    let displayheight = Convert.ToInt32(display.Height)
+    let originx = displaywidth / 2
+    let originy = displayheight / 2
+
+    let mutable graphics = GraphicsLibrary(display)
+
+    let loadscreen newValue (firstColor : Color) (secondColor : Color) = 
+        async {
+            graphics.Clear(true)
+            graphics.CurrentFont <- Font12x16()
+            graphics.DrawText(120, 92, $"{newValue}", Color.White, GraphicsLibrary.ScaleFactor.X4, GraphicsLibrary.TextAlignment.Center)
+            graphics.Show()
+        }
+
     let relayGreen = Relays.Relay(MeadowApp.Device, MeadowApp.Device.Pins.D05)
     let mutable ventilationIsOn : bool = false
 
     let toggleRelays duration =
         async {
-            while latestCO2Value.Value.PartsPerMillion > warningThreshold.Value.PartsPerMillion do
+            printfn $"Ventilator ON..."
+            while latestCO2Value.Value.PartsPerMillion > reductionThreshold.Value.PartsPerMillion do
                 ventilationIsOn <- true
-                led.SetColor(onboardLEDColor)
-                relayGreen.Toggle()
-                Thread.Sleep(int (duration))
-                relayGreen.Toggle()
+                if relayGreen.IsOn = false then 
+                    relayGreen.Toggle()
                 Thread.Sleep(int (duration))
             ventilationIsOn <- false
+            relayGreen.Toggle()
             printfn $"Ventilator OFF..."
         }
-
-    do sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
 
     let consumer = Ccs811.CreateObserver(fun result -> 
         let newValue = match result.New with | (new_val, _) -> new_val
         latestCO2Value <- newValue
         printfn $"New CO2 value: {latestCO2Value}"
-        led.SetColor(onboardLEDColor, 100f)
-        if latestCO2Value.Value.PartsPerMillion > warningThreshold.Value.PartsPerMillion && ventilationIsOn = false then 
+        loadscreen newValue Color.Green Color.Orange |> Async.StartAsTask |> ignore
+        if latestCO2Value.Value.PartsPerMillion > triggerThreshold.Value.PartsPerMillion && ventilationIsOn = false then 
             do toggleRelays 2000 |> Async.StartAsTask |> ignore)
 
+    do sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
     let s = sensor.Subscribe(consumer)
 
 [<EntryPoint>]
