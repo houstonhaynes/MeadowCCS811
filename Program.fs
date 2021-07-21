@@ -12,8 +12,7 @@ type MeadowApp() =
     inherit App<F7Micro, MeadowApp>()
 
     let led = RgbPwmLed(MeadowApp.Device, MeadowApp.Device.Pins.OnboardLedRed, MeadowApp.Device.Pins.OnboardLedGreen,
-                      MeadowApp.Device.Pins.OnboardLedBlue, 3.3f, 3.3f, 3.3f,
-                      Peripherals.Leds.IRgbLed.CommonType.CommonAnode)
+                      MeadowApp.Device.Pins.OnboardLedBlue, 3.3f, 3.3f, 3.3f, Peripherals.Leds.IRgbLed.CommonType.CommonAnode)
 
     let i2c = MeadowApp.Device.CreateI2cBus(Hardware.I2cBusSpeed.Standard)
     let sensor = new Ccs811 (i2c)
@@ -22,11 +21,8 @@ type MeadowApp() =
     let reductionThreshold = Nullable (Units.Concentration(650.0, Units.Concentration.UnitType.PartsPerMillion))
     let mutable latestCO2Value =  Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
 
-    let display = new Gc9a01 (MeadowApp.Device, 
-                            MeadowApp.Device.CreateSpiBus(48000L),  
-                            MeadowApp.Device.Pins.D02,  
-                            MeadowApp.Device.Pins.D01,  
-                            MeadowApp.Device.Pins.D00)
+    let display = new Gc9a01 (MeadowApp.Device, MeadowApp.Device.CreateSpiBus(48000L), 
+                        MeadowApp.Device.Pins.D02, MeadowApp.Device.Pins.D01, MeadowApp.Device.Pins.D00)
 
     let mutable graphics = GraphicsLibrary(display)
 
