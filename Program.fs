@@ -46,7 +46,7 @@ type MeadowApp() =
     let relayGreen = Relays.Relay(MeadowApp.Device, MeadowApp.Device.Pins.D05)
     let mutable ventilationIsOn : bool = false
 
-    let toggleRelays duration =
+    let toggleRelay duration =
         async {
             printfn $"Ventilator ON..."
             while latestCO2Value.Value.PartsPerMillion > reductionThreshold.Value.PartsPerMillion do
@@ -65,7 +65,7 @@ type MeadowApp() =
         printfn $"New CO2 value: {latestCO2Value}"
         loadscreen newValue Color.Green Color.Orange |> Async.StartAsTask |> ignore
         if latestCO2Value.Value.PartsPerMillion > triggerThreshold.Value.PartsPerMillion && ventilationIsOn = false then 
-            do toggleRelays 2000 |> Async.StartAsTask |> ignore)
+            do toggleRelay 2000 |> Async.StartAsTask |> ignore)
 
     do sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
     let s = sensor.Subscribe(consumer)
