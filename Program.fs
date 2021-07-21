@@ -28,14 +28,9 @@ type MeadowApp() =
                             MeadowApp.Device.Pins.D01,  
                             MeadowApp.Device.Pins.D00)
 
-    let displaywidth = Convert.ToInt32(display.Width)
-    let displayheight = Convert.ToInt32(display.Height)
-    let originx = displaywidth / 2
-    let originy = displayheight / 2
-
     let mutable graphics = GraphicsLibrary(display)
 
-    let loadscreen newValue (firstColor : Color) (secondColor : Color) = 
+    let loadscreen newValue = 
         async {
             graphics.Clear(true)
             graphics.CurrentFont <- Font12x16()
@@ -63,9 +58,9 @@ type MeadowApp() =
         let newValue = match result.New with | (new_val, _) -> new_val
         latestCO2Value <- newValue
         printfn $"New CO2 value: {latestCO2Value}"
-        loadscreen newValue Color.Green Color.Orange |> Async.StartAsTask |> ignore
+        loadscreen newValue |> Async.StartAsTask |> ignore
         if latestCO2Value.Value.PartsPerMillion > triggerThreshold.Value.PartsPerMillion && ventilationIsOn = false then 
-            do toggleRelay 2000 |> Async.StartAsTask |> ignore)
+            do toggleRelay 3000 |> Async.StartAsTask |> ignore)
 
     do sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
     let s = sensor.Subscribe(consumer)
