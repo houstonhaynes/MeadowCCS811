@@ -30,7 +30,7 @@ type MeadowApp() =
 
     let mutable graphics = GraphicsLibrary(display)
 
-    let loadscreen newValue = 
+    let updateDisplay newValue = 
         async {
             graphics.Clear(true)
             graphics.CurrentFont <- Font12x16()
@@ -58,7 +58,7 @@ type MeadowApp() =
         let newValue = match result.New with | (new_val, _) -> new_val
         latestCO2Value <- newValue
         printfn $"New CO2 value: {latestCO2Value}"
-        loadscreen newValue |> Async.StartAsTask |> ignore
+        updateDisplay newValue |> Async.StartAsTask |> ignore
         if latestCO2Value.Value.PartsPerMillion > triggerThreshold.Value.PartsPerMillion && ventilationIsOn = false then 
             do toggleRelay 3000 |> Async.StartAsTask |> ignore)
 
