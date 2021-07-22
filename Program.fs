@@ -54,6 +54,12 @@ type MeadowApp() =
         let newValue = match result.New with | (new_val, _) -> new_val
         latestCO2Value <- newValue
         printfn $"New CO2 value: {latestCO2Value}"
+        let onboardLEDColor = match newValue.Value.PartsPerMillion with 
+                                | i when i >= 1500.0 -> Color.Red
+                                | i when i >= 1000.0 && i < 1500.0 -> Color.Orange
+                                | i when i >= 600.0 && i < 1000.0 -> Color.Yellow
+                                | _ -> Color.Green
+        led.SetColor(onboardLEDColor)
         updateDisplay newValue |> Async.StartAsTask |> ignore
         if latestCO2Value.Value.PartsPerMillion > triggerThreshold.Value.PartsPerMillion && ventilationIsOn = false then 
             do toggleRelay 3000 |> Async.StartAsTask |> ignore)
