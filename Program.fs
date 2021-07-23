@@ -32,7 +32,7 @@ type MeadowApp() =
             graphics.Show()
         }
 
-    let relayOne = Relays.Relay(MeadowApp.Device, MeadowApp.Device.Pins.D05)
+    let mutable relayOne = Relays.Relay(MeadowApp.Device, MeadowApp.Device.Pins.D05)
     let mutable ventilationIsOn = false
 
     let toggleRelay duration =
@@ -52,7 +52,7 @@ type MeadowApp() =
         let mutable newValue = match result.New with | (co2, _) -> co2
         latestCO2Value <- newValue
         printfn $"New CO2 value: {latestCO2Value}" |> ignore
-        displayColor <- match newValue.Value.PartsPerMillion with 
+        displayColor <- match newValue.Value.PartsPerMillion with
                         | i when i >= 2000.0 -> Color.DarkRed
                         | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
                         | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
@@ -62,7 +62,7 @@ type MeadowApp() =
             do toggleRelay 3000 |> Async.StartAsTask |> ignore)
 
     do sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
-    let s = sensor.Subscribe(consumer)
+    let mutable s = sensor.Subscribe(consumer)
 
 [<EntryPoint>]
 let main argv =
