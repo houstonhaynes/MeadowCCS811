@@ -3,7 +3,6 @@ open System.Threading
 open Meadow.Devices
 open Meadow
 open Meadow.Foundation
-open Meadow.Foundation.Leds
 open Meadow.Foundation.Sensors.Atmospheric
 open Meadow.Foundation.Graphics
 open Meadow.Foundation.Displays.TftSpi
