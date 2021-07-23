@@ -10,7 +10,7 @@ open Meadow.Foundation.Displays.TftSpi
 type MeadowApp() =
     inherit App<F7Micro, MeadowApp>()
 
-    let i2c = MeadowApp.Device.CreateI2cBus(Hardware.I2cBusSpeed.Standard)
+    let mutable i2c = MeadowApp.Device.CreateI2cBus(Hardware.I2cBusSpeed.Standard)
     let mutable sensor = new Ccs811 (i2c)
 
     let triggerThreshold = Nullable (Units.Concentration(750.0, Units.Concentration.UnitType.PartsPerMillion))
@@ -48,7 +48,7 @@ type MeadowApp() =
             printfn "Ventilator OFF..." |> ignore
         }
 
-    let consumer = Ccs811.CreateObserver(fun result -> 
+    let mutable consumer = Ccs811.CreateObserver(fun result -> 
         let mutable newValue = match result.New with | (co2, _) -> co2
         latestCO2Value <- newValue
         printfn $"New CO2 value: {latestCO2Value}" |> ignore
