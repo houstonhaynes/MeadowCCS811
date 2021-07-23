@@ -11,9 +11,7 @@ open Meadow.Foundation.Displays.TftSpi
 type MeadowApp() =
     inherit App<F7Micro, MeadowApp>()
 
-    let led = RgbPwmLed(MeadowApp.Device, MeadowApp.Device.Pins.OnboardLedRed, MeadowApp.Device.Pins.OnboardLedGreen,
-                      MeadowApp.Device.Pins.OnboardLedBlue, 3.3f, 3.3f, 3.3f, Peripherals.Leds.IRgbLed.CommonType.CommonAnode)
-    let mutable onboardLEDColor : Color = Color.Green
+    let mutable displayColor : Color = Color.DarkGreen.WithBrightness(25.0)
 
     let i2c = MeadowApp.Device.CreateI2cBus(Hardware.I2cBusSpeed.Standard)
     let sensor = new Ccs811 (i2c)
@@ -30,8 +28,8 @@ type MeadowApp() =
     let updateDisplay newValue = 
         async {
             graphics.Clear(true)
-            graphics.CurrentFont <- Font12x16()
-            graphics.DrawText(120, 92, $"{newValue}", Color.White, GraphicsLibrary.ScaleFactor.X4, GraphicsLibrary.TextAlignment.Center)
+            graphics.CurrentFont <- Font12x20()
+            graphics.DrawText(120, 92, $"{newValue}", displayColor.WithBrightness(25.0), GraphicsLibrary.ScaleFactor.X4, GraphicsLibrary.TextAlignment.Center)
             graphics.Show()
         }
 
@@ -54,14 +52,13 @@ type MeadowApp() =
     let consumer = Ccs811.CreateObserver(fun result -> 
         let newValue = match result.New with | (new_val, _) -> new_val
         latestCO2Value <- newValue
-        updateDisplay newValue |> Async.StartAsTask |> ignore
         printfn $"New CO2 value: {latestCO2Value}"
-        onboardLEDColor <- match newValue.Value.PartsPerMillion with 
-                                        | i when i >= 1500.0 -> Color.Red
-                                        | i when i >= 1000.0 && i < 1500.0 -> Color.Orange
+        displayColor <- match newValue.Value.PartsPerMillion with 
+                                        | i when i >= 2000.0 -> Color.DarkRed
+                                        | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
                                         | i when i >= 600.0 && i < 1000.0 -> Color.Yellow
-                                        | _ -> Color.Green
-        led.SetColor(onboardLEDColor, 1f)
+                                        | _ -> Color.DarkGreen
+        updateDisplay newValue |> Async.StartAsTask |> ignore
         if latestCO2Value.Value.PartsPerMillion > triggerThreshold.Value.PartsPerMillion && ventilationIsOn = false then 
             do toggleRelay 3000 |> Async.StartAsTask |> ignore)
 
