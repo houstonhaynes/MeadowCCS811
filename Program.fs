@@ -1,7 +1,7 @@
 open System
 open System.Threading
-open Meadow.Devices
 open Meadow
+open Meadow.Devices
 open Meadow.Foundation
 open Meadow.Foundation.Sensors.Atmospheric
 open Meadow.Foundation.Graphics
@@ -11,17 +11,17 @@ type MeadowApp() =
     inherit App<F7Micro, MeadowApp>()
 
     let i2c = MeadowApp.Device.CreateI2cBus(Hardware.I2cBusSpeed.Standard)
-    let sensor = new Ccs811 (i2c)
+    let mutable sensor = new Ccs811 (i2c)
 
     let triggerThreshold = Nullable (Units.Concentration(750.0, Units.Concentration.UnitType.PartsPerMillion))
     let reductionThreshold = Nullable (Units.Concentration(650.0, Units.Concentration.UnitType.PartsPerMillion))
     let mutable latestCO2Value =  Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
 
-    let display = new Gc9a01 (MeadowApp.Device, MeadowApp.Device.CreateSpiBus(48000L), 
+    let mutable display = new Gc9a01 (MeadowApp.Device, MeadowApp.Device.CreateSpiBus(48000L), 
                             MeadowApp.Device.Pins.D02, MeadowApp.Device.Pins.D01, MeadowApp.Device.Pins.D00)
     let mutable displayColor : Color = Color.DarkGreen.WithBrightness(25.0)
 
-    let graphics = GraphicsLibrary(display)
+    let mutable graphics = GraphicsLibrary(display)
 
     let updateDisplay newValue = 
         async {
