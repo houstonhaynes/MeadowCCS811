@@ -11,8 +11,6 @@ open Meadow.Foundation.Displays.TftSpi
 type MeadowApp() =
     inherit App<F7Micro, MeadowApp>()
 
-    let mutable displayColor : Color = Color.DarkGreen.WithBrightness(25.0)
-
     let i2c = MeadowApp.Device.CreateI2cBus(Hardware.I2cBusSpeed.Standard)
     let sensor = new Ccs811 (i2c)
 
@@ -22,6 +20,7 @@ type MeadowApp() =
 
     let display = new Gc9a01 (MeadowApp.Device, MeadowApp.Device.CreateSpiBus(48000L), 
                             MeadowApp.Device.Pins.D02, MeadowApp.Device.Pins.D01, MeadowApp.Device.Pins.D00)
+    let mutable displayColor : Color = Color.DarkGreen.WithBrightness(25.0)
 
     let graphics = GraphicsLibrary(display)
 
@@ -29,35 +28,36 @@ type MeadowApp() =
         async {
             graphics.Clear(true)
             graphics.CurrentFont <- Font12x20()
-            graphics.DrawText(120, 92, $"{newValue}", displayColor.WithBrightness(25.0), GraphicsLibrary.ScaleFactor.X4, GraphicsLibrary.TextAlignment.Center)
+            graphics.DrawText(120, 92, $"{newValue}", displayColor.WithBrightness(25.0), 
+                GraphicsLibrary.ScaleFactor.X4, GraphicsLibrary.TextAlignment.Center)
             graphics.Show()
         }
 
-    let relayGreen = Relays.Relay(MeadowApp.Device, MeadowApp.Device.Pins.D05)
-    let mutable ventilationIsOn : bool = false
+    let relayOne = Relays.Relay(MeadowApp.Device, MeadowApp.Device.Pins.D05)
+    let mutable ventilationIsOn = false
 
     let toggleRelay duration =
         async {
-            printfn $"Ventilator ON..."
+            printfn "Ventilator ON..."
             while latestCO2Value.Value.PartsPerMillion > reductionThreshold.Value.PartsPerMillion do
                 ventilationIsOn <- true
-                if relayGreen.IsOn = false then 
-                    relayGreen.Toggle()
+                if relayOne.IsOn = false then 
+                    relayOne.Toggle()
                 Thread.Sleep(int (duration))
             ventilationIsOn <- false
-            relayGreen.Toggle()
-            printfn $"Ventilator OFF..."
+            relayOne.Toggle()
+            printfn "Ventilator OFF..." |> ignore
         }
 
     let consumer = Ccs811.CreateObserver(fun result -> 
-        let newValue = match result.New with | (new_val, _) -> new_val
+        let newValue = match result.New with | (co2, _) -> co2
         latestCO2Value <- newValue
-        printfn $"New CO2 value: {latestCO2Value}"
+        printfn $"New CO2 value: {latestCO2Value}" |> ignore
         displayColor <- match newValue.Value.PartsPerMillion with 
-                                        | i when i >= 2000.0 -> Color.DarkRed
-                                        | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
-                                        | i when i >= 600.0 && i < 1000.0 -> Color.Yellow
-                                        | _ -> Color.DarkGreen
+                        | i when i >= 2000.0 -> Color.DarkRed
+                        | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
+                        | i when i >= 600.0 && i < 1000.0 -> Color.Yellow
+                        | _ -> Color.DarkGreen
         updateDisplay newValue |> Async.StartAsTask |> ignore
         if latestCO2Value.Value.PartsPerMillion > triggerThreshold.Value.PartsPerMillion && ventilationIsOn = false then 
             do toggleRelay 3000 |> Async.StartAsTask |> ignore)
