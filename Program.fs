@@ -10,8 +10,8 @@ open Meadow.Foundation.Displays.TftSpi
 type MeadowApp() =
     inherit App<F7Micro, MeadowApp>()
 
-    let i2c = MeadowApp.Device.CreateI2cBus(Hardware.I2cBusSpeed.Standard)
-    let sensor = new Ccs811 (i2c)
+    let mutable i2c = MeadowApp.Device.CreateI2cBus(Hardware.I2cBusSpeed.Standard)
+    let mutable sensor = new Ccs811 (i2c)
 
     let triggerThreshold = Nullable (Units.Concentration(750.0, Units.Concentration.UnitType.PartsPerMillion))
     let reductionThreshold = Nullable (Units.Concentration(650.0, Units.Concentration.UnitType.PartsPerMillion))
@@ -42,7 +42,7 @@ type MeadowApp() =
                 ventilationIsOn <- true
                 if relayOne.IsOn = false then 
                     relayOne.Toggle()
-                Thread.Sleep(int (duration))
+                do! Async.Sleep(int (duration))
             ventilationIsOn <- false
             relayOne.Toggle()
             printfn "Ventilator OFF..." |> ignore
@@ -57,9 +57,9 @@ type MeadowApp() =
                         | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
                         | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
                         | _ -> Color.DeepSkyBlue
-        updateDisplay newValue |> Async.StartAsTask |> ignore
+        updateDisplay newValue |> Async.Start |> ignore
         if newValue.Value.PartsPerMillion > triggerThreshold.Value.PartsPerMillion && ventilationIsOn = false then 
-            do toggleRelay 3000 |> Async.StartAsTask |> ignore)
+            do toggleRelay 3000 |> Async.Start |> ignore)
 
     do sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
     let mutable s = sensor.Subscribe(consumer)
