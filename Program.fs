@@ -49,16 +49,16 @@ type MeadowApp() =
         }
 
     let consumer = Ccs811.CreateObserver(fun result -> 
-        let newValue = match result.New with | (co2, _) -> co2
+        let mutable newValue = match result.New with | (co2, _) -> co2
         latestCO2Value <- newValue
         printfn $"New CO2 value: {latestCO2Value}" |> ignore
         displayColor <- match newValue.Value.PartsPerMillion with 
                         | i when i >= 2000.0 -> Color.DarkRed
                         | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
-                        | i when i >= 600.0 && i < 1000.0 -> Color.Yellow
-                        | _ -> Color.DarkGreen
+                        | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
+                        | _ -> Color.DeepSkyBlue
         updateDisplay newValue |> Async.StartAsTask |> ignore
-        if latestCO2Value.Value.PartsPerMillion > triggerThreshold.Value.PartsPerMillion && ventilationIsOn = false then 
+        if newValue.Value.PartsPerMillion > triggerThreshold.Value.PartsPerMillion && ventilationIsOn = false then 
             do toggleRelay 3000 |> Async.StartAsTask |> ignore)
 
     do sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
