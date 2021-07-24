@@ -38,7 +38,7 @@ type MeadowApp() =
             printfn "Ventilator ON..."
             while latestCO2Value.Value.PartsPerMillion > reductionThreshold.Value.PartsPerMillion do
                 ventilationIsOn <- true
-                if relayOne.IsOn = false then 
+                if not relayOne.IsOn then 
                     relayOne.Toggle()
                 do! Async.Sleep(int (duration))
             ventilationIsOn <- false
@@ -60,7 +60,7 @@ type MeadowApp() =
         if previousCO2Value.Value.PartsPerMillion <> latestCO2Value.Value.PartsPerMillion then
             updateDisplay newValue |> Async.Start |> ignore 
             printfn $"New CO2 value: {latestCO2Value}" |> ignore
-        if newValue.Value.PartsPerMillion > triggerThreshold.Value.PartsPerMillion && ventilationIsOn = false then 
+        if newValue.Value.PartsPerMillion > triggerThreshold.Value.PartsPerMillion && not ventilationIsOn then 
             toggleRelay 3000 |> Async.Start |> ignore)
 
 
