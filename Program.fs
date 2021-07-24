@@ -63,7 +63,6 @@ type MeadowApp() =
         if newValue.Value.PartsPerMillion > triggerThreshold.Value.PartsPerMillion && not ventilationIsOn then 
             toggleRelay 3000 |> Async.Start |> ignore)
 
-
     do sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
     let mutable s = sensor.Subscribe(consumer)
 
