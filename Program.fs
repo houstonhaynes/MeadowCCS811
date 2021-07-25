@@ -59,7 +59,7 @@ type MeadowApp() =
                         | _ -> Color.DeepSkyBlue
         if previousCO2Value.Value.PartsPerMillion <> latestCO2Value.Value.PartsPerMillion then
             updateDisplay newValue |> Async.Start |> ignore 
-            printfn $"New CO2 value: {latestCO2Value}" |> ignore
+            printfn $"New CO2 value: {newValue}" |> ignore
         if newValue.Value.PartsPerMillion > triggerThreshold.Value.PartsPerMillion && not ventilationIsOn then 
             toggleRelay 3000 |> Async.Start |> ignore)
 
