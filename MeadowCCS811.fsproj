@@ -11,10 +11,10 @@
   <ItemGroup>
     <PackageReference Include="Meadow.Foundation" Version="0.*" />
     <PackageReference Include="Meadow.F7" Version="0.*" />
-	<PackageReference Include="Meadow.Foundation.Displays.TftSpi" Version="0.7.47" />
-	<PackageReference Include="Meadow.Foundation.Sensors.Atmospheric.Ccs811" Version="0.1.7" />
+	<PackageReference Include="Meadow.Foundation.Displays.TftSpi" Version="0.7.49" />
+	<PackageReference Include="Meadow.Foundation.Sensors.Atmospheric.Ccs811" Version="0.1.8" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="6.0.0" />
+    <PackageReference Update="FSharp.Core" Version="5.0.2" />
   </ItemGroup>
 </Project>
