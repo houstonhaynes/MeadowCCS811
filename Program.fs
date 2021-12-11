@@ -5,6 +5,7 @@ open Meadow.Foundation
 open Meadow.Foundation.Sensors.Atmospheric
 open Meadow.Foundation.Graphics
 open Meadow.Foundation.Displays.TftSpi
+open Meadow.Hardware
 
 type MeadowApp() =
     inherit App<F7Micro, MeadowApp>()
@@ -17,8 +18,9 @@ type MeadowApp() =
     let mutable latestCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
     let mutable previousCO2Value = Nullable (Units.Concentration(0.0, Units.Concentration.UnitType.PartsPerMillion))
 
-    let mutable display = new Gc9a01 (MeadowApp.Device, MeadowApp.Device.CreateSpiBus(48000L), 
-                            MeadowApp.Device.Pins.D02, MeadowApp.Device.Pins.D01, MeadowApp.Device.Pins.D00)
+    let config = new SpiClockConfiguration(12000L, SpiClockConfiguration.Mode.Mode3);
+    let mutable display = new Gc9a01 (MeadowApp.Device, MeadowApp.Device.CreateSpiBus(MeadowApp.Device.Pins.SCK, MeadowApp.Device.Pins.MOSI, MeadowApp.Device.Pins.MISO, config), 
+                                MeadowApp.Device.Pins.D02, MeadowApp.Device.Pins.D01, MeadowApp.Device.Pins.D00)
     let mutable displayColor : Color = Color.White.WithBrightness(25.0)
     let mutable graphics = GraphicsLibrary(display)
     let updateDisplay newValue = 
