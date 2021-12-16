@@ -24,23 +24,27 @@ type MeadowApp() =
     let mutable latestCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
     let mutable previousCO2Value = Nullable (Units.Concentration(0.0, Units.Concentration.UnitType.PartsPerMillion))
 
-    let config = new SpiClockConfiguration(48000L, SpiClockConfiguration.Mode.Mode3);
+    let config = new SpiClockConfiguration(12000L, SpiClockConfiguration.Mode.Mode2);
     let spiBus = MeadowApp.Device.CreateSpiBus(MeadowApp.Device.Pins.SCK, MeadowApp.Device.Pins.MOSI, MeadowApp.Device.Pins.MISO, config)
-    let display = new Gc9a01 (MeadowApp.Device, spiBus, MeadowApp.Device.Pins.D02, MeadowApp.Device.Pins.D01, MeadowApp.Device.Pins.D00)
+    let display = new St7789 (MeadowApp.Device, spiBus, MeadowApp.Device.Pins.D02, MeadowApp.Device.Pins.D01, MeadowApp.Device.Pins.D00, 240, 240, ColorType.Format16bppRgb565)
 
     let displaywidth = Convert.ToInt32(display.Width)
     let displayheight = Convert.ToInt32(display.Height)
     let originx = displaywidth / 2
     let originy = displayheight / 2
 
-
     let mutable displayColor : Color = Color.White
-    let graphics = GraphicsLibrary(display)
-    let updateDisplay = 
+    let mutable graphics = GraphicsLibrary(display)
+    let mutable updateDisplay = 
         async {
             graphics.CurrentFont <- Font12x16()
-            graphics.Clear()
-            graphics.DrawText(115, 90, $"{latestCO2Value}", displayColor, GraphicsLibrary.ScaleFactor.X4, GraphicsLibrary.TextAlignment.Center)
+            graphics.Rotation <- RotationType._180Degrees
+            graphics.Clear(true)
+            graphics.DrawCircle(originx, originy, 100, Color.Yellow, true, true)
+            graphics.DrawCircle(originx, originy, 90, Color.Black, true, true)
+            graphics.DrawCircle(originx, originy, 80, Color.Blue, true, true)
+            graphics.DrawRoundedRectangle(52, 98, 135, 44, 8, Color.Black, true)
+            graphics.DrawText(120, 98, $"{latestCO2Value}", displayColor, GraphicsLibrary.ScaleFactor.X3, GraphicsLibrary.TextAlignment.Center)
             graphics.Show()
         }
 
