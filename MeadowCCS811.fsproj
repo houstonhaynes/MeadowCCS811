@@ -11,6 +11,7 @@
   <ItemGroup>
     <PackageReference Include="Meadow.Foundation" Version="0.*" />
     <PackageReference Include="Meadow.F7" Version="0.*" />
+    <PackageReference Include="Meadow.Foundation.Displays.GraphicsLibrary" Version="0.*" />
 	<PackageReference Include="Meadow.Foundation.Displays.TftSpi" Version="0.*" />
 	<PackageReference Include="Meadow.Foundation.Sensors.Atmospheric.Ccs811" Version="0.*" />
   </ItemGroup>
