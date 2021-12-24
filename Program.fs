@@ -23,6 +23,7 @@ type MeadowApp() =
     let reductionThreshold = Nullable (Units.Concentration(650.0, Units.Concentration.UnitType.PartsPerMillion))
     let mutable latestCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
     let mutable previousCO2Value = Nullable (Units.Concentration(0.0, Units.Concentration.UnitType.PartsPerMillion))
+    let mutable projectedCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
 
     let config = new SpiClockConfiguration((Units.Frequency(48.0, Units.Frequency.UnitType.Kilohertz)), SpiClockConfiguration.Mode.Mode3);
     let spiBus = MeadowApp.Device.CreateSpiBus(MeadowApp.Device.Pins.SCK, MeadowApp.Device.Pins.MOSI, MeadowApp.Device.Pins.MISO, config)
@@ -37,14 +38,28 @@ type MeadowApp() =
     let mutable graphics = MicroGraphics(display)
     let mutable updateDisplay = 
         async {
+
+            let outerCircleColor = match projectedCO2Value.Value.PartsPerMillion with
+                                    | i when i >= 2000.0 -> Color.Red
+                                    | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
+                                    | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
+                                    | _ -> Color.LightSteelBlue
+
+            let centerCircleColor = match latestCO2Value.Value.PartsPerMillion with
+                                    | i when i >= 2000.0 -> Color.Red
+                                    | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
+                                    | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
+                                    | _ -> Color.LightSteelBlue
+
+
             graphics.CurrentFont <- Font12x16()
             graphics.Rotation <- RotationType._180Degrees
             graphics.Clear(false)
-            graphics.DrawCircle(originx, originy, 115, Color.Yellow, true, true)
+            graphics.DrawCircle(originx, originy, 115, outerCircleColor, true, true)
             graphics.DrawCircle(originx, originy, 90, Color.Black, true, true)
-            graphics.DrawCircle(originx, originy, 80, Color.Blue, true, true)
+            graphics.DrawCircle(originx, originy, 80, centerCircleColor, true, true)
             graphics.DrawRoundedRectangle(48, 98, 145, 44, 8, Color.Black, true)
-            graphics.DrawText(120, 98, $"{latestCO2Value}", displayColor, ScaleFactor.X3, TextAlignment.Center)
+            graphics.DrawText(120, 98, $"{latestCO2Value}", Color.WhiteSmoke, ScaleFactor.X3, TextAlignment.Center)
             graphics.Show()
         }
 
