@@ -1,4 +1,5 @@
 open System
+open System.Drawing
 open Meadow
 open Meadow.Devices
 open Meadow.Foundation
@@ -7,6 +8,8 @@ open Meadow.Foundation.Graphics
 open Meadow.Foundation.Displays.TftSpi
 open Meadow.Foundation.Leds
 open Meadow.Hardware
+open SimpleJpegDecoder
+open System.IO
 
 type MeadowApp() =
     inherit App<F7Micro, MeadowApp>()
@@ -18,9 +21,10 @@ type MeadowApp() =
                 MeadowApp.Device.Pins.OnboardLedBlue, 3.3f, 3.3f, 3.3f, Peripherals.Leds.IRgbLed.CommonType.CommonAnode)
     let mutable onboardLEDColor : Color = Color.Red
 
-
     let triggerThreshold = Nullable (Units.Concentration(750.0, Units.Concentration.UnitType.PartsPerMillion))
     let reductionThreshold = Nullable (Units.Concentration(650.0, Units.Concentration.UnitType.PartsPerMillion))
+    let nominalCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
+    let maximumCO2Value = Nullable (Units.Concentration(4000.0, Units.Concentration.UnitType.PartsPerMillion))
     let mutable latestCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
     let mutable previousCO2Value = Nullable (Units.Concentration(0.0, Units.Concentration.UnitType.PartsPerMillion))
     let mutable projectedCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
@@ -34,7 +38,6 @@ type MeadowApp() =
     let originx = displaywidth / 2
     let originy = displayheight / 2
 
-    let mutable displayColor : Color = Color.White
     let mutable graphics = MicroGraphics(display)
     let mutable updateDisplay = 
         async {
@@ -51,15 +54,23 @@ type MeadowApp() =
                                     | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
                                     | _ -> Color.LightSteelBlue
 
-
             graphics.CurrentFont <- Font12x16()
             graphics.Rotation <- RotationType._180Degrees
             graphics.Clear(false)
             graphics.DrawCircle(originx, originy, 115, outerCircleColor, true, true)
             graphics.DrawCircle(originx, originy, 90, Color.Black, true, true)
             graphics.DrawCircle(originx, originy, 80, centerCircleColor, true, true)
-            graphics.DrawRoundedRectangle(48, 98, 145, 44, 8, Color.Black, true)
+            graphics.DrawRoundedRectangle(48, 97, 145, 45, 8, Color.Black, true)
             graphics.DrawText(120, 98, $"{latestCO2Value}", Color.WhiteSmoke, ScaleFactor.X3, TextAlignment.Center)
+            graphics.DrawRoundedRectangle(63, 68, 115, 24, 6, Color.Black, true)
+            graphics.DrawRoundedRectangle(63, 145, 55, 24, 6, Color.Black, true)
+            graphics.DrawRoundedRectangle(121, 145, 55, 24, 6, Color.Black, true)
+            graphics.DrawRoundedRectangle(104, 172, 32, 32, 8, Color.Black, true)
+            graphics.CurrentFont <- Font6x8()
+            graphics.DrawText(67, 73, $"Breathe", Color.LightSeaGreen, ScaleFactor.X2, TextAlignment.Left)            
+            graphics.DrawText(175, 73, $"EZ", Color.DeepPink, ScaleFactor.X2, TextAlignment.Right)
+            graphics.DrawText(115, 150, $"{previousCO2Value}", Color.WhiteSmoke, ScaleFactor.X2, TextAlignment.Right)
+            graphics.DrawText(172, 150, $"{projectedCO2Value}", Color.WhiteSmoke, ScaleFactor.X2, TextAlignment.Right)
             graphics.Show()
         }
 
@@ -87,12 +98,13 @@ type MeadowApp() =
         latestCO2Value <- newValue
         let oldValue = match result.Old.Value with | (co2 , _) -> co2
         if oldValue.HasValue then
-            previousCO2Value <- oldValue    
-        displayColor <- match newValue.Value.PartsPerMillion with
-                        | i when i >= 2000.0 -> Color.Red
-                        | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
-                        | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
-                        | _ -> Color.LightSteelBlue
+            previousCO2Value <- oldValue
+            let projectedValue = Nullable (Units.Concentration((latestCO2Value.Value.PartsPerMillion + 
+                                                                (latestCO2Value.Value.PartsPerMillion - previousCO2Value.Value.PartsPerMillion)), 
+                                                                Units.Concentration.UnitType.PartsPerMillion))
+            projectedCO2Value <- Nullable (Units.Concentration(Math.Max(projectedValue.Value.PartsPerMillion, nominalCO2Value.Value.PartsPerMillion), 
+                                                                Units.Concentration.UnitType.PartsPerMillion))
+
         if previousCO2Value.Value.PartsPerMillion <> latestCO2Value.Value.PartsPerMillion then
             updateDisplay |> Async.RunSynchronously |> ignore 
             printfn $"New CO2 value: {latestCO2Value}" |> ignore
