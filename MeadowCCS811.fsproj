@@ -9,10 +9,17 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="arrow-up.jpg" />
+    <EmbeddedResource Include="arrow-down.jpg" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Meadow.Foundation" Version="0.*" />
     <PackageReference Include="Meadow.F7" Version="0.*" />
-	<PackageReference Include="Meadow.Foundation.Displays.TftSpi" Version="0.7.45" />
-	<PackageReference Include="Meadow.Foundation.Sensors.Atmospheric.Ccs811" Version="0.1.5" />
+	<PackageReference Include="Meadow.Foundation.Displays.TftSpi" Version="0.*" />
+	<PackageReference Include="Meadow.Foundation.Sensors.Atmospheric.Ccs811" Version="0.*" />
+	<PackageReference Include="SimpleJpegDecoder" Version="0.4.0" />
+	<PackageReference Include="System.Drawing.Common" Version="6.0.0" />
+	<PackageReference Include="System.Resources.Reader" Version="4.3.0" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="5.0.2" />
