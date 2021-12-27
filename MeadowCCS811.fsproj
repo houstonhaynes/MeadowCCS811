@@ -19,6 +19,7 @@
 	<PackageReference Include="Meadow.Foundation.Sensors.Atmospheric.Ccs811" Version="0.*" />
 	<PackageReference Include="SimpleJpegDecoder" Version="0.4.0" />
 	<PackageReference Include="System.Drawing.Common" Version="6.0.0" />
+	<PackageReference Include="System.Resources.Reader" Version="4.3.0" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="5.0.2" />

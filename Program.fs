@@ -1,5 +1,5 @@
 open System
-open System.Drawing
+open System.Resources
 open Meadow
 open Meadow.Devices
 open Meadow.Foundation
@@ -9,7 +9,6 @@ open Meadow.Foundation.Displays.TftSpi
 open Meadow.Foundation.Leds
 open Meadow.Hardware
 open SimpleJpegDecoder
-open System.IO
 
 type MeadowApp() =
     inherit App<F7Micro, MeadowApp>()
