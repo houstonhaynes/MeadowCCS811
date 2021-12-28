@@ -2,7 +2,6 @@ open System
 open System.IO
 open System.Drawing
 open System.Drawing.Imaging
-open System.Reflection
 open Meadow
 open Meadow.Devices
 open Meadow.Foundation
@@ -27,7 +26,6 @@ type MeadowApp() =
     let triggerThreshold = Nullable (Units.Concentration(750.0, Units.Concentration.UnitType.PartsPerMillion))
     let reductionThreshold = Nullable (Units.Concentration(650.0, Units.Concentration.UnitType.PartsPerMillion))
     let nominalCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
-    let maximumCO2Value = Nullable (Units.Concentration(4000.0, Units.Concentration.UnitType.PartsPerMillion))
     let mutable latestCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
     let mutable previousCO2Value = Nullable (Units.Concentration(0.0, Units.Concentration.UnitType.PartsPerMillion))
     let mutable projectedCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
@@ -82,7 +80,6 @@ type MeadowApp() =
                                     | _ -> dnJpgImage
 
             graphics.CurrentFont <- Font12x16()
-            // graphics.Rotation <- RotationType._180Degrees
             graphics.Clear(false)
             graphics.DrawCircle(originx, originy, 115, outerCircleColor, true, true)
             graphics.DrawCircle(originx, originy, 90, Color.Black, true, true)
