@@ -9,8 +9,12 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="arrow-up.jpg" />
-    <EmbeddedResource Include="arrow-down.jpg" />
+    <EmbeddedResource Include="arrow-up.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="arrow-down.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Meadow.Foundation" Version="0.*" />

@@ -42,22 +42,18 @@ type MeadowApp() =
     let originy = displayheight / 2
 
     let updecoder = new JpegDecoder()
-    let dndecoder = new JpegDecoder()
-
-    let upimg = new Bitmap(Assembly.GetEntryAssembly().GetManifestResourceStream("MeadowCCS811.arrow-up.jpg"))
-    let dnimg = new Bitmap(Assembly.GetEntryAssembly().GetManifestResourceStream("MeadowCCS811.arrow-down.jpg"))
-    
+    let upimg = new Bitmap("arrow-up.jpg")
     let upmemstream = new MemoryStream()
-    let dnmemstream = new MemoryStream()
-
     do upimg.Save(upmemstream, ImageFormat.Jpeg)
-    do dnimg.Save(dnmemstream, ImageFormat.Jpeg)
-
     let upBuffer = updecoder.DecodeJpeg(upmemstream)
-    let dnBuffer = dndecoder.DecodeJpeg(dnmemstream)
+    let upJpgImage = new BufferRgb888(updecoder.Width, updecoder.Height, upBuffer)
 
-    let upJpgImage = new BufferRgb888(updecoder.Width, updecoder.Height, upBuffer);
-    let dnJpgImage = new BufferRgb888(dndecoder.Width, dndecoder.Height, dnBuffer);
+    let dndecoder = new JpegDecoder()
+    let dnimg = new Bitmap("arrow-down.jpg")
+    let dnmemstream = new MemoryStream()
+    do dnimg.Save(dnmemstream, ImageFormat.Jpeg)
+    let dnBuffer = dndecoder.DecodeJpeg(dnmemstream)
+    let dnJpgImage = new BufferRgb888(dndecoder.Width, dndecoder.Height, dnBuffer)
 
     let mutable graphics = MicroGraphics(display)
     let mutable updateDisplay = 
@@ -81,6 +77,10 @@ type MeadowApp() =
                                         | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
                                         | _ -> Color.LightSteelBlue
 
+            let directionImage = match latestCO2Value.Value.PartsPerMillion with
+                                    | i when i > previousCO2Value.Value.PartsPerMillion -> upJpgImage
+                                    | _ -> dnJpgImage
+
             graphics.CurrentFont <- Font12x16()
             // graphics.Rotation <- RotationType._180Degrees
             graphics.Clear(false)
@@ -93,7 +93,7 @@ type MeadowApp() =
             graphics.DrawRoundedRectangle(63, 145, 55, 24, 6, Color.Black, true)
             graphics.DrawRoundedRectangle(121, 145, 55, 24, 6, Color.Black, true)
             graphics.DrawRoundedRectangle(102, 172, 36, 34, 8, Color.Black, true)
-            graphics.DrawBuffer (104, 174, upJpgImage)
+            graphics.DrawBuffer (104, 174, directionImage)
             graphics.CurrentFont <- Font6x8()
             graphics.DrawText(67, 73, $"Breathe", Color.LightSeaGreen, ScaleFactor.X2, TextAlignment.Left)            
             graphics.DrawText(175, 73, $"EZ", Color.DeepPink, ScaleFactor.X2, TextAlignment.Right)
