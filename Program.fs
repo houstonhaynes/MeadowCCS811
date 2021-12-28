@@ -8,11 +8,11 @@ open Meadow.Devices
 open Meadow.Foundation
 open Meadow.Foundation.Sensors.Atmospheric
 open Meadow.Foundation.Graphics
+open Meadow.Foundation.Graphics.Buffers
 open Meadow.Foundation.Displays.TftSpi
 open Meadow.Foundation.Leds
 open Meadow.Hardware
 open SimpleJpegDecoder
-open Meadow.Foundation.Graphics.Buffers
 
 type MeadowApp() =
     inherit App<F7Micro, MeadowApp>()
@@ -44,8 +44,8 @@ type MeadowApp() =
     let updecoder = new JpegDecoder()
     let dndecoder = new JpegDecoder()
 
-    let upimg = new Bitmap(Assembly.GetExecutingAssembly().GetManifestResourceStream($"MeadowCCS811.arrow-up.jpg"))
-    let dnimg = new Bitmap(Assembly.GetExecutingAssembly().GetManifestResourceStream($"MeadowCCS811.arrow-down.jpg"))
+    let upimg = new Bitmap(Assembly.GetEntryAssembly().GetManifestResourceStream("MeadowCCS811.arrow-up.jpg"))
+    let dnimg = new Bitmap(Assembly.GetEntryAssembly().GetManifestResourceStream("MeadowCCS811.arrow-down.jpg"))
     
     let upmemstream = new MemoryStream()
     let dnmemstream = new MemoryStream()
