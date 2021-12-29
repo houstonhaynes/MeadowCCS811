@@ -1,7 +1,5 @@
 open System
 open System.IO
-open System.Drawing
-open System.Drawing.Imaging
 open Meadow
 open Meadow.Devices
 open Meadow.Foundation
@@ -40,18 +38,80 @@ type MeadowApp() =
     let originy = displayheight / 2
 
     let updecoder = new JpegDecoder()
-    let upimg = new Bitmap("arrow-up.jpg")
-    let upmemstream = new MemoryStream()
-    do upimg.Save(upmemstream, ImageFormat.Jpeg)
-    let upBuffer = updecoder.DecodeJpeg(upmemstream)
-    let upJpgImage = new BufferRgb888(updecoder.Width, updecoder.Height, upBuffer)
+    let upBytes = 
+        try
+           File.ReadAllBytes("/meadow0/arrow-up.jpg")
+        with
+        | :? System.IO.IOException as e ->
+            printfn " %s" e.Message
+            // This will terminate the program
+            System.Environment.Exit e.HResult
+            // We have to yield control or return a string array
+            Array.empty
+        | ex -> failwithf " %s" ex.Message
+
+    let upBuffer = 
+        try
+            updecoder.DecodeJpeg(upBytes)
+        with
+        | :? System.IO.IOException as e ->
+            printfn " %s" e.Message
+            // This will terminate the program
+            System.Environment.Exit e.HResult
+            // We have to yield control or return a string array
+            Array.empty
+        | ex -> failwithf " %s" ex.Message
+
+    let upJpgImage = 
+        try
+            new BufferRgb888(updecoder.Width, updecoder.Height, upBuffer)
+        with
+        | :? System.IO.IOException as e ->
+            printfn " %s" e.Message
+            // This will terminate the program
+            System.Environment.Exit e.HResult
+            // We have to yield control or return a string array
+            BufferRgb888(0, 0)
+        | ex -> failwithf " %s" ex.Message
+
 
     let dndecoder = new JpegDecoder()
-    let dnimg = new Bitmap("arrow-down.jpg")
-    let dnmemstream = new MemoryStream()
-    do dnimg.Save(dnmemstream, ImageFormat.Jpeg)
-    let dnBuffer = dndecoder.DecodeJpeg(dnmemstream)
-    let dnJpgImage = new BufferRgb888(dndecoder.Width, dndecoder.Height, dnBuffer)
+    let dnfilestream = 
+        try
+            File.ReadAllBytes("/meadow0/arrow-down.jpg")
+        with
+        | :? System.IO.IOException as e ->
+            printfn " %s" e.Message
+            // This will terminate the program
+            System.Environment.Exit e.HResult
+            // We have to yield control or return a string array
+            Array.empty
+        | ex -> failwithf " %s" ex.Message
+
+    let dnBuffer = 
+        try
+            dndecoder.DecodeJpeg(dnfilestream)
+        with
+        | :? System.IO.IOException as e ->
+            printfn " %s" e.Message
+            // This will terminate the program
+            System.Environment.Exit e.HResult
+            // We have to yield control or return a string array
+            Array.empty
+        | ex -> failwithf " %s" ex.Message
+
+    let dnJpgImage = 
+        try
+            new BufferRgb888(dndecoder.Width, dndecoder.Height, dnBuffer)
+        with
+        | :? System.IO.IOException as e ->
+            printfn " %s" e.Message
+            // This will terminate the program
+            System.Environment.Exit e.HResult
+            // We have to yield control or return a string array
+            BufferRgb888(0, 0)
+        | ex -> failwithf " %s" ex.Message
+
 
     let mutable graphics = MicroGraphics(display)
     let mutable updateDisplay = 
