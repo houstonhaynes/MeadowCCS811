@@ -32,12 +32,12 @@ type MeadowApp() =
     let spiBus = MeadowApp.Device.CreateSpiBus(MeadowApp.Device.Pins.SCK, MeadowApp.Device.Pins.MOSI, MeadowApp.Device.Pins.MISO, config)
     let display = new Gc9a01 (MeadowApp.Device, spiBus, MeadowApp.Device.Pins.D02, MeadowApp.Device.Pins.D01, MeadowApp.Device.Pins.D00)
 
-    let displaywidth = Convert.ToInt32(display.Width)
-    let displayheight = Convert.ToInt32(display.Height)
-    let originx = displaywidth / 2
-    let originy = displayheight / 2
+    let displayWidth = Convert.ToInt32(display.Width)
+    let displayHeight = Convert.ToInt32(display.Height)
+    let originX = displayWidth / 2
+    let originY = displayHeight / 2
 
-    let updecoder = new JpegDecoder()
+    let upDecoder = new JpegDecoder()
     let upBytes = 
         try
            File.ReadAllBytes("/meadow0/arrow-up.jpg")
@@ -52,7 +52,7 @@ type MeadowApp() =
 
     let upBuffer = 
         try
-            updecoder.DecodeJpeg(upBytes)
+            upDecoder.DecodeJpeg(upBytes)
         with
         | :? System.IO.IOException as e ->
             printfn " %s" e.Message
@@ -64,7 +64,7 @@ type MeadowApp() =
 
     let upJpgImage = 
         try
-            new BufferRgb888(updecoder.Width, updecoder.Height, upBuffer)
+            new BufferRgb888(upDecoder.Width, upDecoder.Height, upBuffer)
         with
         | :? System.IO.IOException as e ->
             printfn " %s" e.Message
@@ -75,8 +75,8 @@ type MeadowApp() =
         | ex -> failwithf " %s" ex.Message
 
 
-    let dndecoder = new JpegDecoder()
-    let dnfilestream = 
+    let dnDecoder = new JpegDecoder()
+    let dnBytes = 
         try
             File.ReadAllBytes("/meadow0/arrow-down.jpg")
         with
@@ -90,7 +90,7 @@ type MeadowApp() =
 
     let dnBuffer = 
         try
-            dndecoder.DecodeJpeg(dnfilestream)
+            dnDecoder.DecodeJpeg(dnBytes)
         with
         | :? System.IO.IOException as e ->
             printfn " %s" e.Message
@@ -102,7 +102,7 @@ type MeadowApp() =
 
     let dnJpgImage = 
         try
-            new BufferRgb888(dndecoder.Width, dndecoder.Height, dnBuffer)
+            new BufferRgb888(dnDecoder.Width, dnDecoder.Height, dnBuffer)
         with
         | :? System.IO.IOException as e ->
             printfn " %s" e.Message
@@ -135,27 +135,27 @@ type MeadowApp() =
                                         | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
                                         | _ -> Color.LightSteelBlue
 
-            let directionImage = match latestCO2Value.Value.PartsPerMillion with
-                                    | i when i > previousCO2Value.Value.PartsPerMillion -> upJpgImage
-                                    | _ -> dnJpgImage
+            //let directionImage = match latestCO2Value.Value.PartsPerMillion with
+            //                        | i when i > previousCO2Value.Value.PartsPerMillion -> upJpgImage
+            //                        | _ -> dnJpgImage
 
             graphics.CurrentFont <- Font12x16()
             graphics.Clear(false)
-            graphics.DrawCircle(originx, originy, 115, outerCircleColor, true, true)
-            graphics.DrawCircle(originx, originy, 90, Color.Black, true, true)
-            graphics.DrawCircle(originx, originy, 80, centerCircleColor, true, true)
+            graphics.DrawCircle(originX, originY, 115, outerCircleColor, true, true)
+            graphics.DrawCircle(originX, originY, 90, Color.Black, true, true)
+            graphics.DrawCircle(originX, originY, 80, centerCircleColor, true, true)
             graphics.DrawRoundedRectangle(48, 97, 145, 45, 8, Color.Black, true)
             graphics.DrawText(120, 98, $"{latestCO2Value}", centerCircleColor, ScaleFactor.X3, TextAlignment.Center)
             graphics.DrawRoundedRectangle(63, 68, 115, 24, 6, Color.Black, true)
             graphics.DrawRoundedRectangle(63, 145, 55, 24, 6, Color.Black, true)
             graphics.DrawRoundedRectangle(121, 145, 55, 24, 6, Color.Black, true)
             graphics.DrawRoundedRectangle(102, 172, 36, 34, 8, Color.Black, true)
-            graphics.DrawBuffer (104, 174, directionImage)
             graphics.CurrentFont <- Font6x8()
             graphics.DrawText(67, 73, $"Breathe", Color.LightSeaGreen, ScaleFactor.X2, TextAlignment.Left)            
             graphics.DrawText(175, 73, $"EZ", Color.DeepPink, ScaleFactor.X2, TextAlignment.Right)
             graphics.DrawText(115, 150, $"{previousCO2Value}", previousValueColor, ScaleFactor.X2, TextAlignment.Right)
             graphics.DrawText(172, 150, $"{projectedCO2Value}", outerCircleColor, ScaleFactor.X2, TextAlignment.Right)
+            graphics.DrawBuffer (104, 174, upJpgImage)
             graphics.Show()
         }
 
