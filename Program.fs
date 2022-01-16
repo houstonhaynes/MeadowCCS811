@@ -9,7 +9,6 @@ open Meadow.Foundation.Graphics.Buffers
 open Meadow.Foundation.Displays.TftSpi
 open Meadow.Foundation.Leds
 open Meadow.Hardware
-open SimpleJpegDecoder
 
 type MeadowApp() =
     inherit App<F7Micro, MeadowApp>()
@@ -37,81 +36,9 @@ type MeadowApp() =
     let originX = displayWidth / 2
     let originY = displayHeight / 2
 
-    let upDecoder = new JpegDecoder()
-    let upBytes = 
-        try
-            File.OpenRead("/meadow0/arrow-up.jpg")
-        with
-        | :? System.IO.IOException as e ->
-            printfn " %s" e.Message
-            // This will terminate the program
-            System.Environment.Exit e.HResult
-            // We have to yield control or return a string array
-            null
-        | ex -> failwithf " %s" ex.Message
-
-    let upBuffer = 
-        try
-            upDecoder.DecodeJpeg(upBytes)
-        with
-        | :? System.IO.IOException as e ->
-            printfn " %s" e.Message
-            // This will terminate the program
-            System.Environment.Exit e.HResult
-            // We have to yield control or return a string array
-            Array.empty
-        | ex -> failwithf " %s" ex.Message
-
-    let upJpgImage = 
-        try
-            new BufferRgb888(upDecoder.Width, upDecoder.Height, upBuffer)
-        with
-        | :? System.IO.IOException as e ->
-            printfn " %s" e.Message
-            // This will terminate the program
-            System.Environment.Exit e.HResult
-            // We have to yield control or return a string array
-            null
-        | ex -> failwithf " %s" ex.Message
-
-
-    let dnDecoder = new JpegDecoder()
-    let dnBytes = 
-        try
-            File.OpenRead("/meadow0/arrow-down.jpg")
-        with
-        | :? System.IO.IOException as e ->
-            printfn " %s" e.Message
-            // This will terminate the program
-            System.Environment.Exit e.HResult
-            // We have to yield control or return a string array
-            null
-        | ex -> failwithf " %s" ex.Message
-
-    let dnBuffer = 
-        try
-            dnDecoder.DecodeJpeg(dnBytes)
-        with
-        | :? System.IO.IOException as e ->
-            printfn " %s" e.Message
-            // This will terminate the program
-            System.Environment.Exit e.HResult
-            // We have to yield control or return a string array
-            Array.empty
-        | ex -> failwithf " %s" ex.Message
-
-    let dnJpgImage = 
-        try
-            new BufferRgb888(dnDecoder.Width, dnDecoder.Height, dnBuffer)
-        with
-        | :? System.IO.IOException as e ->
-            printfn " %s" e.Message
-            // This will terminate the program
-            System.Environment.Exit e.HResult
-            // We have to yield control or return a string array
-            null
-        | ex -> failwithf " %s" ex.Message
-
+    let upArrowLocation = Path.Combine(MeadowOS.FileSystem.UserFileSystemRoot, $"arrow-up.bmp")
+    let upArrowBytes = File.ReadAllBytes(upArrowLocation)
+    let upArrowBuffer : IDisplayBuffer = new BufferRgb888(32, 32, upArrowBytes)
 
     let mutable graphics = MicroGraphics(display)
     let mutable updateDisplay = 
@@ -135,9 +62,9 @@ type MeadowApp() =
                                         | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
                                         | _ -> Color.LightSteelBlue
 
-            let directionImage = match latestCO2Value.Value.PartsPerMillion with
-                                    | i when i > previousCO2Value.Value.PartsPerMillion -> upJpgImage
-                                    | _ -> dnJpgImage
+            //let directionImage = match latestCO2Value.Value.PartsPerMillion with
+            //                        | i when i > previousCO2Value.Value.PartsPerMillion -> upJpgImage
+            //                        | _ -> dnJpgImage
 
             graphics.CurrentFont <- Font12x16()
             graphics.Clear(false)
@@ -155,7 +82,7 @@ type MeadowApp() =
             graphics.DrawText(175, 73, $"EZ", Color.DeepPink, ScaleFactor.X2, TextAlignment.Right)
             graphics.DrawText(115, 150, $"{previousCO2Value}", previousValueColor, ScaleFactor.X2, TextAlignment.Right)
             graphics.DrawText(172, 150, $"{projectedCO2Value}", outerCircleColor, ScaleFactor.X2, TextAlignment.Right)
-            graphics.DrawBuffer (104, 174, directionImage)
+            graphics.DrawBuffer (104, 174, upArrowBuffer)
             graphics.Show()
         }
 
