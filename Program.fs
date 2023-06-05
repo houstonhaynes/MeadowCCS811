@@ -5,7 +5,7 @@ open Meadow.Devices
 open Meadow.Foundation
 open Meadow.Foundation.Sensors.Atmospheric
 open Meadow.Foundation.Graphics
-open Meadow.Foundation.Displays.TftSpi
+open Meadow.Foundation.Displays
 open Meadow.Foundation.Leds
 open Meadow.Hardware
 open SimpleJpegDecoder
@@ -14,8 +14,8 @@ type MeadowApp() =
     inherit App<F7FeatherV1>()
     let i2c = MeadowApp.Device.CreateI2cBus(Hardware.I2cBusSpeed.Standard)
     let sensor = new Ccs811 (i2c)
-    let led = RgbPwmLed(MeadowApp.Device, MeadowApp.Device.Pins.OnboardLedRed, MeadowApp.Device.Pins.OnboardLedGreen,
-                MeadowApp.Device.Pins.OnboardLedBlue, 3.3f, 3.3f, 3.3f, Peripherals.Leds.IRgbLed.CommonType.CommonAnode)
+    let led = RgbPwmLed(MeadowApp.Device.Pins.OnboardLedRed, MeadowApp.Device.Pins.OnboardLedGreen,
+                MeadowApp.Device.Pins.OnboardLedBlue)
     let mutable onboardLEDColor : Color = Color.Red
     let triggerThreshold = Nullable (Units.Concentration(750.0, Units.Concentration.UnitType.PartsPerMillion))
     let reductionThreshold = Nullable (Units.Concentration(650.0, Units.Concentration.UnitType.PartsPerMillion))
@@ -27,7 +27,7 @@ type MeadowApp() =
 
     let config = new SpiClockConfiguration((Units.Frequency(48.0, Units.Frequency.UnitType.Kilohertz)), SpiClockConfiguration.Mode.Mode3);
     let spiBus = MeadowApp.Device.CreateSpiBus(MeadowApp.Device.Pins.SCK, MeadowApp.Device.Pins.MOSI, MeadowApp.Device.Pins.MISO, config)
-    let display = new St7789 (MeadowApp.Device, spiBus, MeadowApp.Device.Pins.D02, MeadowApp.Device.Pins.D01, MeadowApp.Device.Pins.D00, 240, 240, ColorType.Format16bppRgb565)
+    let display = new St7789 (spiBus, MeadowApp.Device.Pins.D02, MeadowApp.Device.Pins.D01, MeadowApp.Device.Pins.D00, 240, 240, ColorMode.Format16bppRgb565)
 
     let displaywidth = Convert.ToInt32(display.Width)
     let displayheight = Convert.ToInt32(display.Height)
@@ -57,20 +57,20 @@ type MeadowApp() =
             graphics.DrawCircle(originx, originy, 90, Color.Black, true, true)
             graphics.DrawCircle(originx, originy, 80, centerCircleColor, true, true)
             graphics.DrawRoundedRectangle(48, 97, 145, 45, 8, Color.Black, true)
-            graphics.DrawText(120, 98, $"{latestCO2Value}", Color.WhiteSmoke, ScaleFactor.X3, TextAlignment.Center)
+            graphics.DrawText(120, 98, $"{latestCO2Value}", Color.WhiteSmoke, ScaleFactor.X3, HorizontalAlignment.Center)
             graphics.DrawRoundedRectangle(63, 68, 115, 24, 6, Color.Black, true)
             graphics.DrawRoundedRectangle(63, 145, 55, 24, 6, Color.Black, true)
             graphics.DrawRoundedRectangle(121, 145, 55, 24, 6, Color.Black, true)
             graphics.DrawRoundedRectangle(104, 172, 32, 32, 8, Color.Black, true)
             graphics.CurrentFont <- Font6x8()
-            graphics.DrawText(67, 73, $"Breathe", Color.LightSeaGreen, ScaleFactor.X2, TextAlignment.Left)            
-            graphics.DrawText(175, 73, $"EZ", Color.DeepPink, ScaleFactor.X2, TextAlignment.Right)
-            graphics.DrawText(115, 150, $"{previousCO2Value}", Color.WhiteSmoke, ScaleFactor.X2, TextAlignment.Right)
-            graphics.DrawText(172, 150, $"{projectedCO2Value}", Color.WhiteSmoke, ScaleFactor.X2, TextAlignment.Right)
+            graphics.DrawText(67, 73, $"Breathe", Color.LightSeaGreen, ScaleFactor.X2, HorizontalAlignment.Left)            
+            graphics.DrawText(175, 73, $"EZ", Color.DeepPink, ScaleFactor.X2, HorizontalAlignment.Right)
+            graphics.DrawText(115, 150, $"{previousCO2Value}", Color.WhiteSmoke, ScaleFactor.X2, HorizontalAlignment.Right)
+            graphics.DrawText(172, 150, $"{projectedCO2Value}", Color.WhiteSmoke, ScaleFactor.X2, HorizontalAlignment.Right)
             graphics.Show()
         }
 
-    let mutable relayOne = Relays.Relay(MeadowApp.Device, MeadowApp.Device.Pins.D05)
+    let mutable relayOne = Relays.Relay(MeadowApp.Device.Pins.D05)
     let mutable ventilationIsOn = false
 
     let toggleRelay duration =
