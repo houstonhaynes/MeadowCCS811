@@ -11,15 +11,12 @@ open Meadow.Hardware
 open SimpleJpegDecoder
 
 type MeadowApp() =
-    inherit App<F7Micro, MeadowApp>()
-
+    inherit App<F7FeatherV1>()
     let i2c = MeadowApp.Device.CreateI2cBus(Hardware.I2cBusSpeed.Standard)
     let sensor = new Ccs811 (i2c)
-
     let led = RgbPwmLed(MeadowApp.Device, MeadowApp.Device.Pins.OnboardLedRed, MeadowApp.Device.Pins.OnboardLedGreen,
                 MeadowApp.Device.Pins.OnboardLedBlue, 3.3f, 3.3f, 3.3f, Peripherals.Leds.IRgbLed.CommonType.CommonAnode)
     let mutable onboardLEDColor : Color = Color.Red
-
     let triggerThreshold = Nullable (Units.Concentration(750.0, Units.Concentration.UnitType.PartsPerMillion))
     let reductionThreshold = Nullable (Units.Concentration(650.0, Units.Concentration.UnitType.PartsPerMillion))
     let nominalCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
@@ -116,6 +113,6 @@ type MeadowApp() =
 [<EntryPoint>]
 let main argv =
     Console.WriteLine "Starting main..."
-    let app = MeadowApp()
+    let app = new MeadowApp()
     Threading.Thread.Sleep(System.Threading.Timeout.Infinite)
     0 // return an integer exit code
