@@ -46,14 +46,14 @@ type MeadowApp() =
 
     let decoder = new JpegDecoder()
 
-    let upArrowLocation = Path.Combine(MeadowOS.FileSystem.UserFileSystemRoot, "arrow-up.jpg")
-    let upArrowBytes = File.ReadAllBytes(upArrowLocation)
-    let upArrowDecoded = decoder.DecodeJpeg(upArrowBytes)
+    let upArrowLocation = Path.Combine(MeadowOS.FileSystem.UserFileSystemRoot, $"arrow-up.jpg")
+    let upArrowStream= new FileStream(upArrowLocation, FileMode.Open)
+    let upArrowDecoded = decoder.DecodeJpeg(upArrowStream)
     let upArrowBuffer = new BufferRgb888(32, 32, upArrowDecoded)
     
-    let dnArrowLocation = Path.Combine(MeadowOS.FileSystem.UserFileSystemRoot, "arrow-down.jpg")
-    let dnArrowBytes = File.ReadAllBytes(dnArrowLocation)
-    let dnArrowDecoded = decoder.DecodeJpeg(dnArrowBytes)
+    let dnArrowLocation = Path.Combine(MeadowOS.FileSystem.UserFileSystemRoot, $"arrow-down.jpg")
+    let dnArrowStream = new FileStream(dnArrowLocation, FileMode.Open)
+    let dnArrowDecoded = decoder.DecodeJpeg(dnArrowStream)
     let dnArrowBuffer = new BufferRgb888(32, 32, dnArrowDecoded)
 
     let mutable canvas = MicroGraphics(display)
