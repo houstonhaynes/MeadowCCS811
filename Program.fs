@@ -24,7 +24,6 @@ type MeadowApp() =
     let triggerThreshold = Nullable (Units.Concentration(750.0, Units.Concentration.UnitType.PartsPerMillion))
     let reductionThreshold = Nullable (Units.Concentration(650.0, Units.Concentration.UnitType.PartsPerMillion))
     let nominalCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
-    let maximumCO2Value = Nullable (Units.Concentration(4000.0, Units.Concentration.UnitType.PartsPerMillion))
     let mutable latestCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
     let mutable previousCO2Value = Nullable (Units.Concentration(0.0, Units.Concentration.UnitType.PartsPerMillion))
     let mutable projectedCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
@@ -132,9 +131,12 @@ type MeadowApp() =
         let oldValue = match result.Old.Value with | (co2 , _) -> co2
         if oldValue.HasValue then
             previousCO2Value <- oldValue
-            let projectedValue = Nullable (Units.Concentration((latestCO2Value.Value.PartsPerMillion + 
-                                                                (latestCO2Value.Value.PartsPerMillion - previousCO2Value.Value.PartsPerMillion)), 
-                                                                Units.Concentration.UnitType.PartsPerMillion))
+            let projectedValue = match previousCO2Value.Value.PartsPerMillion with 
+                                    | i when i = 0.0 -> nominalCO2Value
+                                    | _ -> Nullable (Units.Concentration((latestCO2Value.Value.PartsPerMillion + 
+                                                                            (latestCO2Value.Value.PartsPerMillion - previousCO2Value.Value.PartsPerMillion)), 
+                                                                            Units.Concentration.UnitType.PartsPerMillion))
+
             projectedCO2Value <- Nullable (Units.Concentration(Math.Max(projectedValue.Value.PartsPerMillion, nominalCO2Value.Value.PartsPerMillion), 
                                                                 Units.Concentration.UnitType.PartsPerMillion))
 
@@ -144,7 +146,7 @@ type MeadowApp() =
         if newValue.Value.PartsPerMillion > triggerThreshold.Value.PartsPerMillion && not ventilationIsOn then 
             toggleRelay 3000 |> Async.Start |> ignore)
 
-    do sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
+    do sensor.StartUpdating(TimeSpan.FromSeconds(3.0))
     let mutable s = sensor.Subscribe(consumer)
 
     override this.Initialize() =

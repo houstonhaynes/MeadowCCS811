@@ -19,3 +19,7 @@ bin
 .vs/MeadowCCS811/DesignTimeBuild/.dtbcache.v2
 
 .fake
+/arrow-circle-down.svg
+/arrow-circle-up.svg
+/arrow-dn.svg
+/arrow-up.svg
