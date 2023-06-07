@@ -2,7 +2,6 @@ namespace MeadowApp
 
 
 open System
-open System.Resources
 open System.IO
 open Meadow
 open Meadow.Devices
@@ -44,16 +43,15 @@ type MeadowApp() =
     
     let originX = displaywidth / 2
     let originY = displayheight / 2
-    let originY = displayheight / 2
 
     let decoder = new JpegDecoder()
 
-    let upArrowLocation = Path.Combine(MeadowOS.FileSystem.UserFileSystemRoot, $"arrow-up.jpg")
+    let upArrowLocation = Path.Combine(MeadowOS.FileSystem.UserFileSystemRoot, "arrow-up.jpg")
     let upArrowBytes = File.ReadAllBytes(upArrowLocation)
     let upArrowDecoded = decoder.DecodeJpeg(upArrowBytes)
     let upArrowBuffer = new BufferRgb888(32, 32, upArrowDecoded)
     
-    let dnArrowLocation = Path.Combine(MeadowOS.FileSystem.UserFileSystemRoot, $"arrow-down.jpg")
+    let dnArrowLocation = Path.Combine(MeadowOS.FileSystem.UserFileSystemRoot, "arrow-down.jpg")
     let dnArrowBytes = File.ReadAllBytes(dnArrowLocation)
     let dnArrowDecoded = decoder.DecodeJpeg(dnArrowBytes)
     let dnArrowBuffer = new BufferRgb888(32, 32, dnArrowDecoded)
