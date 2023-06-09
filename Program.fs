@@ -3,6 +3,8 @@ namespace MeadowApp
 
 open System
 open System.IO
+open System.Reflection
+open System.Resources
 open Meadow
 open Meadow.Devices
 open Meadow.Foundation
@@ -17,25 +19,24 @@ type MeadowApp() =
     inherit App<F7FeatherV1>()
     let i2c = MeadowApp.Device.CreateI2cBus(Hardware.I2cBusSpeed.Standard)
     let sensor = new Ccs811 (i2c)
+    let ppm = Units.Concentration.UnitType.PartsPerMillion
     let led = RgbPwmLed(MeadowApp.Device.Pins.OnboardLedRed, MeadowApp.Device.Pins.OnboardLedGreen,
                 MeadowApp.Device.Pins.OnboardLedBlue)
     let mutable onboardLEDColor : Color = Color.Red
-    let triggerThreshold = Nullable (Units.Concentration(750.0, Units.Concentration.UnitType.PartsPerMillion))
-    let reductionThreshold = Nullable (Units.Concentration(650.0, Units.Concentration.UnitType.PartsPerMillion))
-    let nominalCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
-    let mutable latestCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
-    let mutable previousCO2Value = Nullable (Units.Concentration(0.0, Units.Concentration.UnitType.PartsPerMillion))
-    let mutable projectedCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
+    let triggerThreshold = Nullable (Units.Concentration(750.0, ppm))
+    let reductionThreshold = Nullable (Units.Concentration(650.0, ppm))
+    let nominalCO2Value = Nullable (Units.Concentration(400.0, ppm))
+    let mutable latestCO2Value = Nullable (Units.Concentration(400.0, ppm))
+    let mutable previousCO2Value = Nullable (Units.Concentration(0.0, ppm))
+    let mutable projectedCO2Value = Nullable (Units.Concentration(400.0, ppm))
 
+    let spiBus = MeadowApp.Device.CreateSpiBus((Units.Frequency(48.0, Units.Frequency.UnitType.Kilohertz)))
 
-    let spiBus = MeadowApp.Device.CreateSpiBus(MeadowApp.Device.Pins.SCK, MeadowApp.Device.Pins.MOSI, MeadowApp.Device.Pins.MISO)
-
-    let display = new St7789 (spiBus,  
-                                MeadowApp.Device.Pins.D02,  
-                                MeadowApp.Device.Pins.D01,  
-                                MeadowApp.Device.Pins.D00,
-                                240,
-                                240,
+    let display = new St7789 (spiBus, 
+                                MeadowApp.Device.Pins.D02, 
+                                MeadowApp.Device.Pins.D01, 
+                                MeadowApp.Device.Pins.D00, 
+                                240, 240, 
                                 ColorMode.Format16bppRgb565)
 
     let displaywidth = Convert.ToInt32(display.Width)
@@ -44,19 +45,21 @@ type MeadowApp() =
     let originX = displaywidth / 2
     let originY = displayheight / 2
 
+    let mutable canvas = MicroGraphics(display)
+
     let decoder = new JpegDecoder()
 
-    let upArrowLocation = Path.Combine(MeadowOS.FileSystem.UserFileSystemRoot, $"arrow-up.jpg")
-    let upArrowStream= new FileStream(upArrowLocation, FileMode.Open)
+    let executingAssembly = Assembly.GetExecutingAssembly()
+    let rm = new ResourceManager("MeadowApp", executingAssembly)
+
+    let upArrowStream = rm.GetStream($"arrow-up.jpg")
     let upArrowDecoded = decoder.DecodeJpeg(upArrowStream)
     let upArrowBuffer = new BufferRgb888(32, 32, upArrowDecoded)
     
-    let dnArrowLocation = Path.Combine(MeadowOS.FileSystem.UserFileSystemRoot, $"arrow-down.jpg")
-    let dnArrowStream = new FileStream(dnArrowLocation, FileMode.Open)
+    let dnArrowStream = rm.GetStream($"arrow-down.jpg")
     let dnArrowDecoded = decoder.DecodeJpeg(dnArrowStream)
     let dnArrowBuffer = new BufferRgb888(32, 32, dnArrowDecoded)
 
-    let mutable canvas = MicroGraphics(display)
     let mutable updateDisplay = 
         async {
 
@@ -133,10 +136,10 @@ type MeadowApp() =
                                     | i when i = 0.0 -> nominalCO2Value
                                     | _ -> Nullable (Units.Concentration((latestCO2Value.Value.PartsPerMillion + 
                                                                             (latestCO2Value.Value.PartsPerMillion - previousCO2Value.Value.PartsPerMillion)), 
-                                                                            Units.Concentration.UnitType.PartsPerMillion))
+                                                                            ppm))
 
             projectedCO2Value <- Nullable (Units.Concentration(Math.Max(projectedValue.Value.PartsPerMillion, nominalCO2Value.Value.PartsPerMillion), 
-                                                                Units.Concentration.UnitType.PartsPerMillion))
+                                                                ppm))
 
         if previousCO2Value.Value.PartsPerMillion <> latestCO2Value.Value.PartsPerMillion then
             updateDisplay |> Async.RunSynchronously |> ignore 
