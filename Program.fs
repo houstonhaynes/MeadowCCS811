@@ -3,10 +3,9 @@ namespace MeadowApp
 
 open System
 open System.IO
-open System.Reflection
-open System.Resources
 open Meadow
 open Meadow.Devices
+open Meadow.Hardware
 open Meadow.Foundation
 open Meadow.Foundation.Sensors.Atmospheric
 open Meadow.Foundation.Graphics
@@ -30,7 +29,12 @@ type MeadowApp() =
     let mutable previousCO2Value = Nullable (Units.Concentration(0.0, ppm))
     let mutable projectedCO2Value = Nullable (Units.Concentration(400.0, ppm))
 
-    let spiBus = MeadowApp.Device.CreateSpiBus((Units.Frequency(48.0, Units.Frequency.UnitType.Kilohertz)))
+    let config = new SpiClockConfiguration(new Meadow.Units.Frequency(48000, Meadow.Units.Frequency.UnitType.Kilohertz), 
+                                                SpiClockConfiguration.Mode.Mode3)
+    let spiBus = MeadowApp.Device.CreateSpiBus(MeadowApp.Device.Pins.SCK,
+                                                MeadowApp.Device.Pins.MOSI,
+                                                MeadowApp.Device.Pins.MISO,
+                                                config)
 
     let display = new St7789 (spiBus, 
                                 MeadowApp.Device.Pins.D02, 
@@ -47,18 +51,28 @@ type MeadowApp() =
 
     let mutable canvas = MicroGraphics(display)
 
-    let decoder = new JpegDecoder()
+(*    let updecoder = new JpegDecoder()
 
-    let executingAssembly = Assembly.GetExecutingAssembly()
-    let rm = new ResourceManager("MeadowApp", executingAssembly)
+    let upBytes = 
+           File.ReadAllBytes($"/meadow0/arrow-up.jpg")
 
-    let upArrowStream = rm.GetStream($"arrow-up.jpg")
-    let upArrowDecoded = decoder.DecodeJpeg(upArrowStream)
-    let upArrowBuffer = new BufferRgb888(32, 32, upArrowDecoded)
+    let upBuffer = 
+            updecoder.DecodeJpeg(upBytes)
+
+    let upJpgImage = 
+            new BufferRgb888(updecoder.Width, updecoder.Height, upBuffer)
+            
+    let dndecoder = new JpegDecoder()
     
-    let dnArrowStream = rm.GetStream($"arrow-down.jpg")
-    let dnArrowDecoded = decoder.DecodeJpeg(dnArrowStream)
-    let dnArrowBuffer = new BufferRgb888(32, 32, dnArrowDecoded)
+    let dnfilestream = 
+            File.ReadAllBytes($"/meadow0/arrow-down.jpg")
+
+    let dnBuffer = 
+            dndecoder.DecodeJpeg(dnfilestream)
+
+    let dnJpgImage = 
+            new BufferRgb888(dndecoder.Width, dndecoder.Height, dnBuffer)*)
+
 
     let mutable updateDisplay = 
         async {
@@ -82,9 +96,9 @@ type MeadowApp() =
                                         | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
                                         | _ -> Color.LightSteelBlue
 
-            let directionImage = match latestCO2Value.Value.PartsPerMillion with
-                                    | i when i > previousCO2Value.Value.PartsPerMillion -> upArrowBuffer
-                                    | _ -> dnArrowBuffer
+(*            let directionImage = match latestCO2Value.Value.PartsPerMillion with
+                                    | i when i > previousCO2Value.Value.PartsPerMillion -> upJpgImage
+                                    | _ -> dnJpgImage*)
 
             canvas.CurrentFont <- Font12x16()
             canvas.Clear(false)
@@ -102,7 +116,7 @@ type MeadowApp() =
             canvas.DrawText(175, 73, $"EZ", Color.DeepPink, ScaleFactor.X2, HorizontalAlignment.Right)
             canvas.DrawText(115, 150, $"{previousCO2Value}", previousValueColor, ScaleFactor.X2, HorizontalAlignment.Right)
             canvas.DrawText(172, 150, $"{projectedCO2Value}", outerCircleColor, ScaleFactor.X2, HorizontalAlignment.Right)
-            canvas.DrawBuffer (104, 174, directionImage)
+            (*canvas.DrawBuffer (104, 174, directionImage)*)
             canvas.Show()
         }
 
