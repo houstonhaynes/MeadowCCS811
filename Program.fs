@@ -45,39 +45,25 @@ type MeadowApp() =
 
     let displaywidth = Convert.ToInt32(display.Width)
     let displayheight = Convert.ToInt32(display.Height)
-    
-    let originX = displaywidth / 2
-    let originY = displayheight / 2
 
     let mutable canvas = MicroGraphics(display)
 
-(*    let updecoder = new JpegDecoder()
+    let originX = displaywidth / 2
+    let originY = displayheight / 2
 
-    let upBytes = 
-           File.ReadAllBytes($"/meadow0/arrow-up.jpg")
+    let updecoder = new JpegDecoder()
+    let upimg = new FileStream("/meadow0/arrow-up.jpg", FileMode.Open, FileAccess.Read)
+    let upBuffer = updecoder.DecodeJpeg(upimg)
+    let upJpgImage = new BufferRgb888(updecoder.Width, updecoder.Height, upBuffer)
 
-    let upBuffer = 
-            updecoder.DecodeJpeg(upBytes)
-
-    let upJpgImage = 
-            new BufferRgb888(updecoder.Width, updecoder.Height, upBuffer)
-            
     let dndecoder = new JpegDecoder()
-    
-    let dnfilestream = 
-            File.ReadAllBytes($"/meadow0/arrow-down.jpg")
-
-    let dnBuffer = 
-            dndecoder.DecodeJpeg(dnfilestream)
-
-    let dnJpgImage = 
-            new BufferRgb888(dndecoder.Width, dndecoder.Height, dnBuffer)*)
+    let dnimg = new FileStream("meadow0/arrow-down.jpg", FileMode.Open, FileAccess.Read)
+    let dnBuffer = dndecoder.DecodeJpeg(dnimg)
+    let dnJpgImage = new BufferRgb888(dndecoder.Width, dndecoder.Height, dnBuffer)
 
 
     let mutable updateDisplay = 
         async {
-
-
             let outerCircleColor = match projectedCO2Value.Value.PartsPerMillion with
                                         | i when i >= 2000.0 -> Color.Red
                                         | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
@@ -96,9 +82,9 @@ type MeadowApp() =
                                         | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
                                         | _ -> Color.LightSteelBlue
 
-(*            let directionImage = match latestCO2Value.Value.PartsPerMillion with
+            let directionImage = match latestCO2Value.Value.PartsPerMillion with
                                     | i when i > previousCO2Value.Value.PartsPerMillion -> upJpgImage
-                                    | _ -> dnJpgImage*)
+                                    | _ -> dnJpgImage
 
             canvas.CurrentFont <- Font12x16()
             canvas.Clear(false)
@@ -116,7 +102,7 @@ type MeadowApp() =
             canvas.DrawText(175, 73, $"EZ", Color.DeepPink, ScaleFactor.X2, HorizontalAlignment.Right)
             canvas.DrawText(115, 150, $"{previousCO2Value}", previousValueColor, ScaleFactor.X2, HorizontalAlignment.Right)
             canvas.DrawText(172, 150, $"{projectedCO2Value}", outerCircleColor, ScaleFactor.X2, HorizontalAlignment.Right)
-            (*canvas.DrawBuffer (104, 174, directionImage)*)
+            canvas.DrawBuffer (104, 174, directionImage)
             canvas.Show()
         }
 

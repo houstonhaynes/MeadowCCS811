@@ -6,12 +6,12 @@
     <AssemblyName>App</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="arrow-up.jpg">
+    <EmbeddedResource Include="arrow-up.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="arrow-down.jpg">
+    </EmbeddedResource>
+    <EmbeddedResource Include="arrow-down.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </EmbeddedResource>
     <Content Include="wifi.config.yaml" />
     <Content Include="meadow.config.yaml" />
     <Content Include="app.config.yaml" />
@@ -26,9 +26,6 @@
     <PackageReference Include="Meadow.Foundation.Displays.TftSpi" Version="1.0.2.1" />
     <PackageReference Include="Meadow.Foundation.Sensors.Atmospheric.Ccs811" Version="1.0.2.1" />
     <PackageReference Include="SimpleJpegDecoder" Version="0.4.0" />
-    <PackageReference Include="System.Drawing.Common" Version="6.0.0" />
-    <PackageReference Include="System.Collections.Immutable" Version="6.0.0" />
-    <PackageReference Include="System.Reflection" Version="4.3.0" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="6.0.0" />
