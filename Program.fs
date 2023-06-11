@@ -57,17 +57,11 @@ type MeadowApp() =
     let updecoder = new JpegDecoder()
     let upArrowStream = assembly.GetManifestResourceStream($"MeadowCCS811.arrow-up.jpg")
     let upArrowArray = updecoder.DecodeJpeg(upArrowStream)
-(*    let upMemoryStream = new MemoryStream()
-    do upArrowStream.CopyTo(upMemoryStream)
-    let upArrorArray = upMemoryStream.ToArray()*)
     let upJpgImage = new BufferRgb888(32, 32, upArrowArray)
 
     let dndecoder = new JpegDecoder()
     let dnArrowStream = assembly.GetManifestResourceStream($"MeadowCCS811.arrow-down.jpg")
     let dnArrowArray = dndecoder.DecodeJpeg(dnArrowStream)
-(*    let dnMemoryStream = new MemoryStream()
-    do dnArrowStream.CopyTo(dnMemoryStream)
-    let dnArrorArray = dnMemoryStream.ToArray()*)
     let dnJpgImage = new BufferRgb888(32, 32, dnArrowArray)
 
 
