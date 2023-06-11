@@ -13,7 +13,6 @@ open Meadow.Foundation.Graphics
 open Meadow.Foundation.Graphics.Buffers
 open Meadow.Foundation.Displays
 open Meadow.Foundation.Leds
-open SimpleJpegDecoder
 
 type MeadowApp() =
     inherit App<F7FeatherV1>()
@@ -52,30 +51,14 @@ type MeadowApp() =
     let originX = displaywidth / 2
     let originY = displayheight / 2
 
-    let LoadResource filename = 
-        let assembly = Assembly.GetExecutingAssembly()
-        let resourceName = "MeadowCCS811." + filename
-        let stream = assembly.GetManifestResourceStream(resourceName)
-        let ms = new MemoryStream()
-        do stream.CopyTo(ms)
-        let result = ms.ToArray()
-        result
+    let LoadBmp filename = 
+        let filePath = Path.Combine(MeadowOS.FileSystem.UserFileSystemRoot, $"{filename}.bmp");
+        let image = Image.LoadFromFile(filePath)
+        image
     
+    let upBmpImage = LoadBmp("arrow-up")
 
-    let updecoder = new JpegDecoder()
-    let upArrowJpgData = LoadResource("arrow-up.jpg")
-    do  Resolver.Log.Info  $"Loaded {upArrowJpgData.Length} bytes, decoding arrow-up.jpg ..."
-    let upArrowArray = updecoder.DecodeJpeg(upArrowJpgData)
-    do  Resolver.Log.Info  $"Decoded {upArrowArray.Length} bytes, buffering arrow-up.jpg ..."
-    let upJpgImage = new BufferRgb888(32, 32, upArrowArray)
-
-
-    let dndecoder = new JpegDecoder()
-    let dnArrowJpgData = LoadResource("arrow-down.jpg")
-    do  Resolver.Log.Info  $"Loaded {upArrowJpgData.Length} bytes, decoding arrow-down.jpg ..."
-    let dnArrowArray = dndecoder.DecodeJpeg(dnArrowJpgData)
-    do  Resolver.Log.Info  $"Decoded {dnArrowArray.Length} bytes, buffering arrow-down.jpg ..."
-    let dnJpgImage = new BufferRgb888(32, 32, dnArrowArray)
+    let dnBmpImage = LoadBmp("arrow-down")
 
 
     let mutable updateDisplay = 
@@ -99,8 +82,8 @@ type MeadowApp() =
                                         | _ -> Color.LightSteelBlue
 
             let directionImage = match latestCO2Value.Value.PartsPerMillion with
-                                    | i when i > previousCO2Value.Value.PartsPerMillion -> upJpgImage
-                                    | _ -> dnJpgImage
+                                    | i when i > previousCO2Value.Value.PartsPerMillion -> upBmpImage
+                                    | _ -> dnBmpImage
 
             canvas.CurrentFont <- Font12x16()
             canvas.Clear(false)
@@ -109,16 +92,16 @@ type MeadowApp() =
             canvas.DrawCircle(originX, originY, 80, centerCircleColor, true, true)
             canvas.DrawRoundedRectangle(48, 97, 145, 45, 8, Color.Black, true)
             canvas.DrawText(120, 98, $"{latestCO2Value}", centerCircleColor, ScaleFactor.X3, HorizontalAlignment.Center)
-            canvas.DrawRoundedRectangle(63, 68, 115, 24, 6, Color.Black, true)
-            canvas.DrawRoundedRectangle(63, 145, 55, 24, 6, Color.Black, true)
-            canvas.DrawRoundedRectangle(121, 145, 55, 24, 6, Color.Black, true)
-            canvas.DrawRoundedRectangle(102, 172, 36, 34, 8, Color.Black, true)
+            canvas.DrawRoundedRectangle(62, 68, 115, 24, 6, Color.Black, true)
+            canvas.DrawRoundedRectangle(62, 145, 55, 24, 6, Color.Black, true)
+            canvas.DrawRoundedRectangle(120, 143, 55, 24, 6, Color.Black, true)
+            canvas.DrawRoundedRectangle(102, 172, 40, 36, 8, Color.Black, true)
             canvas.CurrentFont <- Font6x8()
             canvas.DrawText(67, 73, $"Breathe", Color.LightSeaGreen, ScaleFactor.X2, HorizontalAlignment.Left)            
             canvas.DrawText(175, 73, $"EZ", Color.DeepPink, ScaleFactor.X2, HorizontalAlignment.Right)
             canvas.DrawText(115, 150, $"{previousCO2Value}", previousValueColor, ScaleFactor.X2, HorizontalAlignment.Right)
             canvas.DrawText(172, 150, $"{projectedCO2Value}", outerCircleColor, ScaleFactor.X2, HorizontalAlignment.Right)
-            canvas.DrawBuffer (104, 174, directionImage)
+            canvas.DrawImage (104, 174, directionImage)
             canvas.Show()
         }
 
