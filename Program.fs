@@ -52,16 +52,29 @@ type MeadowApp() =
     let originX = displaywidth / 2
     let originY = displayheight / 2
 
-    let assembly = Assembly.GetExecutingAssembly()
+    let LoadResource filename = 
+        let assembly = Assembly.GetExecutingAssembly()
+        let resourceName = "MeadowCCS811." + filename
+        let stream = assembly.GetManifestResourceStream(resourceName)
+        let ms = new MemoryStream()
+        do stream.CopyTo(ms)
+        let result = ms.ToArray()
+        result
+    
 
     let updecoder = new JpegDecoder()
-    let upArrowStream = assembly.GetManifestResourceStream($"MeadowCCS811.arrow-up.jpg")
-    let upArrowArray = updecoder.DecodeJpeg(upArrowStream)
+    let upArrowJpgData = LoadResource("arrow-up.jpg")
+    do  Resolver.Log.Info  $"Loaded {upArrowJpgData.Length} bytes, decoding arrow-up.jpg ..."
+    let upArrowArray = updecoder.DecodeJpeg(upArrowJpgData)
+    do  Resolver.Log.Info  $"Decoded {upArrowArray.Length} bytes, buffering arrow-up.jpg ..."
     let upJpgImage = new BufferRgb888(32, 32, upArrowArray)
 
+
     let dndecoder = new JpegDecoder()
-    let dnArrowStream = assembly.GetManifestResourceStream($"MeadowCCS811.arrow-down.jpg")
-    let dnArrowArray = dndecoder.DecodeJpeg(dnArrowStream)
+    let dnArrowJpgData = LoadResource("arrow-down.jpg")
+    do  Resolver.Log.Info  $"Loaded {upArrowJpgData.Length} bytes, decoding arrow-down.jpg ..."
+    let dnArrowArray = dndecoder.DecodeJpeg(dnArrowJpgData)
+    do  Resolver.Log.Info  $"Decoded {dnArrowArray.Length} bytes, buffering arrow-down.jpg ..."
     let dnJpgImage = new BufferRgb888(32, 32, dnArrowArray)
 
 

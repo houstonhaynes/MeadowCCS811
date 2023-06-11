@@ -28,7 +28,7 @@
     <PackageReference Include="SimpleJpegDecoder" Version="*" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="6.0.0" />
+    <PackageReference Update="FSharp.Core" Version="*" />
   </ItemGroup>
   <ItemGroup>
     <Content Update="meadow.config.yaml">
