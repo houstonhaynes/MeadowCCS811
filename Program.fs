@@ -1,8 +1,9 @@
-namespace MeadowApp
+namespace MeadowCCS811
 
 
 open System
 open System.IO
+open System.Reflection
 open Meadow
 open Meadow.Devices
 open Meadow.Hardware
@@ -29,7 +30,7 @@ type MeadowApp() =
     let mutable previousCO2Value = Nullable (Units.Concentration(0.0, ppm))
     let mutable projectedCO2Value = Nullable (Units.Concentration(400.0, ppm))
 
-    let config = new SpiClockConfiguration(new Meadow.Units.Frequency(48000, Meadow.Units.Frequency.UnitType.Kilohertz), 
+    let config = new SpiClockConfiguration(new Meadow.Units.Frequency(12000, Meadow.Units.Frequency.UnitType.Kilohertz), 
                                                 SpiClockConfiguration.Mode.Mode3)
     let spiBus = MeadowApp.Device.CreateSpiBus(MeadowApp.Device.Pins.SCK,
                                                 MeadowApp.Device.Pins.MOSI,
@@ -51,15 +52,23 @@ type MeadowApp() =
     let originX = displaywidth / 2
     let originY = displayheight / 2
 
+    let assembly = Assembly.GetExecutingAssembly()
+
     let updecoder = new JpegDecoder()
-    let upimg = new FileStream("/meadow0/arrow-up.jpg", FileMode.Open, FileAccess.Read)
-    let upBuffer = updecoder.DecodeJpeg(upimg)
-    let upJpgImage = new BufferRgb888(updecoder.Width, updecoder.Height, upBuffer)
+    let upArrowStream = assembly.GetManifestResourceStream($"MeadowCCS811.arrow-up.jpg")
+    let upArrowArray = updecoder.DecodeJpeg(upArrowStream)
+(*    let upMemoryStream = new MemoryStream()
+    do upArrowStream.CopyTo(upMemoryStream)
+    let upArrorArray = upMemoryStream.ToArray()*)
+    let upJpgImage = new BufferRgb888(32, 32, upArrowArray)
 
     let dndecoder = new JpegDecoder()
-    let dnimg = new FileStream("meadow0/arrow-down.jpg", FileMode.Open, FileAccess.Read)
-    let dnBuffer = dndecoder.DecodeJpeg(dnimg)
-    let dnJpgImage = new BufferRgb888(dndecoder.Width, dndecoder.Height, dnBuffer)
+    let dnArrowStream = assembly.GetManifestResourceStream($"MeadowCCS811.arrow-down.jpg")
+    let dnArrowArray = dndecoder.DecodeJpeg(dnArrowStream)
+(*    let dnMemoryStream = new MemoryStream()
+    do dnArrowStream.CopyTo(dnMemoryStream)
+    let dnArrorArray = dnMemoryStream.ToArray()*)
+    let dnJpgImage = new BufferRgb888(32, 32, dnArrowArray)
 
 
     let mutable updateDisplay = 
