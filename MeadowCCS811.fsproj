@@ -6,9 +6,6 @@
     <AssemblyName>App</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <RuntimeHostConfigurationOption Include="System.Drawing.EnableUnixSupport" Value="true" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="arrow-up.bmp">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
@@ -31,7 +28,7 @@
     <PackageReference Include="SimpleJpegDecoder" Version="*" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="*" />
+    <PackageReference Update="FSharp.Core" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
     <Content Update="meadow.config.yaml">

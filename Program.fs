@@ -3,14 +3,12 @@ namespace MeadowCCS811
 
 open System
 open System.IO
-open System.Reflection
 open Meadow
 open Meadow.Devices
 open Meadow.Hardware
 open Meadow.Foundation
 open Meadow.Foundation.Sensors.Atmospheric
 open Meadow.Foundation.Graphics
-open Meadow.Foundation.Graphics.Buffers
 open Meadow.Foundation.Displays
 open Meadow.Foundation.Leds
 
@@ -29,19 +27,17 @@ type MeadowApp() =
     let mutable previousCO2Value = Nullable (Units.Concentration(0.0, ppm))
     let mutable projectedCO2Value = Nullable (Units.Concentration(400.0, ppm))
 
-    let config = new SpiClockConfiguration(new Meadow.Units.Frequency(12000, Meadow.Units.Frequency.UnitType.Kilohertz), 
+    let config = new SpiClockConfiguration(new Meadow.Units.Frequency(48.0, Meadow.Units.Frequency.UnitType.Kilohertz), 
                                                 SpiClockConfiguration.Mode.Mode3)
     let spiBus = MeadowApp.Device.CreateSpiBus(MeadowApp.Device.Pins.SCK,
                                                 MeadowApp.Device.Pins.MOSI,
                                                 MeadowApp.Device.Pins.MISO,
                                                 config)
 
-    let display = new St7789 (spiBus, 
+    let display = new Gc9a01 (spiBus, 
                                 MeadowApp.Device.Pins.D02, 
                                 MeadowApp.Device.Pins.D01, 
-                                MeadowApp.Device.Pins.D00, 
-                                240, 240, 
-                                ColorMode.Format16bppRgb565)
+                                MeadowApp.Device.Pins.D00)
 
     let displaywidth = Convert.ToInt32(display.Width)
     let displayheight = Convert.ToInt32(display.Height)
