@@ -15,16 +15,16 @@ type MeadowApp() =
     inherit App<F7FeatherV1>()
     
     override this.Run () =
-        do Resolver.Log.Info "Run... (F#)"
-
         let i2c = MeadowApp.Device.CreateI2cBus(Hardware.I2cBusSpeed.Standard)
         let sensor = new Ccs811 (i2c)
         let ppm = Units.Concentration.UnitType.PartsPerMillion
-        let led = RgbLed(MeadowApp.Device.Pins.OnboardLedRed, MeadowApp.Device.Pins.OnboardLedGreen,
+        let led = RgbLed(MeadowApp.Device.Pins.OnboardLedRed, 
+                                MeadowApp.Device.Pins.OnboardLedGreen,
                                 MeadowApp.Device.Pins.OnboardLedBlue)
         let onboardLEDColor = RgbLedColors.Cyan
 
-        let config = new SpiClockConfiguration(new Meadow.Units.Frequency(48.0, Meadow.Units.Frequency.UnitType.Kilohertz), 
+        let config = new SpiClockConfiguration(new Meadow.Units.Frequency(48.0, 
+                                    Meadow.Units.Frequency.UnitType.Kilohertz), 
                                     SpiClockConfiguration.Mode.Mode3)
         let spiBus = MeadowApp.Device.CreateSpiBus(MeadowApp.Device.Pins.SCK,
                                     MeadowApp.Device.Pins.MOSI,
@@ -48,7 +48,6 @@ type MeadowApp() =
             image
 
         let upBmpImage = LoadBmp("arrow-up")
-        
         let dnBmpImage = LoadBmp("arrow-down")
 
         
@@ -60,29 +59,18 @@ type MeadowApp() =
         let mutable projectedCO2Value = Nullable (Units.Concentration(400.0, ppm))
         
         let mutable canvas = MicroGraphics(display)
-        
-        do Resolver.Log.Info "Hello, Meadow!"
+
+        let circleColor value = match value with
+                                | i when i >= 2000.0 -> Color.Red
+                                | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
+                                | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
+                                | _ -> Color.LightSteelBlue
 
         let mutable updateDisplay = 
             async {
-                let outerCircleColor = match projectedCO2Value.Value.PartsPerMillion with
-                                            | i when i >= 2000.0 -> Color.Red
-                                            | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
-                                            | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
-                                            | _ -> Color.LightSteelBlue
-        
-                let centerCircleColor = match latestCO2Value.Value.PartsPerMillion with
-                                            | i when i >= 2000.0 -> Color.Red
-                                            | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
-                                            | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
-                                            | _ -> Color.LightSteelBlue
-        
-                let previousValueColor = match previousCO2Value.Value.PartsPerMillion with
-                                            | i when i >= 2000.0 -> Color.Red
-                                            | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
-                                            | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
-                                            | _ -> Color.LightSteelBlue
-        
+                let outerCircleColor = circleColor projectedCO2Value.Value.PartsPerMillion
+                let centerCircleColor = circleColor latestCO2Value.Value.PartsPerMillion
+                let previousValueColor = circleColor previousCO2Value.Value.PartsPerMillion
                 let directionImage = match latestCO2Value.Value.PartsPerMillion with
                                         | i when i > previousCO2Value.Value.PartsPerMillion -> upBmpImage
                                         | _ -> dnBmpImage
@@ -139,10 +127,8 @@ type MeadowApp() =
                                         | _ -> Nullable (Units.Concentration((latestCO2Value.Value.PartsPerMillion + 
                                                                                 (latestCO2Value.Value.PartsPerMillion - previousCO2Value.Value.PartsPerMillion)), 
                                                                                 ppm))
-        
                 projectedCO2Value <- Nullable (Units.Concentration(Math.Max(projectedValue.Value.PartsPerMillion, nominalCO2Value.Value.PartsPerMillion), 
                                                                     ppm))
-        
             if previousCO2Value.Value.PartsPerMillion <> latestCO2Value.Value.PartsPerMillion then
                 updateDisplay |> Async.RunSynchronously |> ignore 
                 Resolver.Log.Info $"New CO2 value: {latestCO2Value}" |> ignore
