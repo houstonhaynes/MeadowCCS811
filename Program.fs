@@ -22,7 +22,6 @@ type MeadowApp() =
                                 MeadowApp.Device.Pins.OnboardLedGreen,
                                 MeadowApp.Device.Pins.OnboardLedBlue)
         let onboardLEDColor = RgbLedColors.Cyan
-
         let config = new SpiClockConfiguration(new Meadow.Units.Frequency(48.0, 
                                     Meadow.Units.Frequency.UnitType.Kilohertz), 
                                     SpiClockConfiguration.Mode.Mode3)
@@ -30,51 +29,40 @@ type MeadowApp() =
                                     MeadowApp.Device.Pins.MOSI,
                                     MeadowApp.Device.Pins.MISO,
                                     config)
-
         let display = new Gc9a01 (spiBus, 
                     MeadowApp.Device.Pins.D02, 
                     MeadowApp.Device.Pins.D01, 
                     MeadowApp.Device.Pins.D00)
-
         let displaywidth = Convert.ToInt32(display.Width)
         let displayheight = Convert.ToInt32(display.Height)
-
         let originX = displaywidth / 2
         let originY = displayheight / 2
-
         let LoadBmp filename = 
             let filePath = Path.Combine(MeadowOS.FileSystem.UserFileSystemRoot, $"{filename}.bmp");
             let image = Image.LoadFromFile(filePath)
             image
-
         let upBmpImage = LoadBmp("arrow-up")
         let dnBmpImage = LoadBmp("arrow-down")
-
-        
         let triggerThreshold = Nullable (Units.Concentration(750.0, ppm))
         let reductionThreshold = Nullable (Units.Concentration(650.0, ppm))
         let nominalCO2Value = Nullable (Units.Concentration(400.0, ppm))
         let mutable latestCO2Value = Nullable (Units.Concentration(400.0, ppm))
         let mutable previousCO2Value = Nullable (Units.Concentration(0.0, ppm))
-        let mutable projectedCO2Value = Nullable (Units.Concentration(400.0, ppm))
-        
+        let mutable projectedCO2Value = Nullable (Units.Concentration(400.0, ppm)) 
         let mutable canvas = MicroGraphics(display)
-
-        let circleColor value = match value with
+        let concentrationColor value = match value with
                                 | i when i >= 2000.0 -> Color.Red
                                 | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
                                 | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
                                 | _ -> Color.LightSteelBlue
-
         let mutable updateDisplay = 
             async {
-                let outerCircleColor = circleColor projectedCO2Value.Value.PartsPerMillion
-                let centerCircleColor = circleColor latestCO2Value.Value.PartsPerMillion
-                let previousValueColor = circleColor previousCO2Value.Value.PartsPerMillion
+                let outerCircleColor = concentrationColor projectedCO2Value.Value.PartsPerMillion
+                let centerCircleColor = concentrationColor latestCO2Value.Value.PartsPerMillion
+                let previousValueColor = concentrationColor previousCO2Value.Value.PartsPerMillion
                 let directionImage = match latestCO2Value.Value.PartsPerMillion with
                                         | i when i > previousCO2Value.Value.PartsPerMillion -> upBmpImage
                                         | _ -> dnBmpImage
-        
                 canvas.IgnoreOutOfBoundsPixels <- true
                 canvas.CurrentFont <- Font12x16()
                 canvas.Clear(false)
@@ -96,10 +84,8 @@ type MeadowApp() =
                 canvas.Show()
             }
         
-        
         let mutable relayOne = Relays.Relay(MeadowApp.Device.Pins.D05)
         let mutable ventilationIsOn = false
-        
         let toggleRelay duration =
             async {
                 Resolver.Log.Info "Ventilator ON..."
@@ -125,17 +111,15 @@ type MeadowApp() =
                 let projectedValue = match previousCO2Value.Value.PartsPerMillion with 
                                         | i when i = 0.0 -> nominalCO2Value
                                         | _ -> Nullable (Units.Concentration((latestCO2Value.Value.PartsPerMillion + 
-                                                                                (latestCO2Value.Value.PartsPerMillion - previousCO2Value.Value.PartsPerMillion)), 
-                                                                                ppm))
-                projectedCO2Value <- Nullable (Units.Concentration(Math.Max(projectedValue.Value.PartsPerMillion, nominalCO2Value.Value.PartsPerMillion), 
-                                                                    ppm))
+                                                        (latestCO2Value.Value.PartsPerMillion - previousCO2Value.Value.PartsPerMillion)), ppm))
+                projectedCO2Value <- Nullable (Units.Concentration(Math.Max(
+                                                projectedValue.Value.PartsPerMillion, 
+                                                nominalCO2Value.Value.PartsPerMillion), ppm))
             if previousCO2Value.Value.PartsPerMillion <> latestCO2Value.Value.PartsPerMillion then
                 updateDisplay |> Async.RunSynchronously |> ignore 
                 Resolver.Log.Info $"New CO2 value: {latestCO2Value}" |> ignore
             if newValue.Value.PartsPerMillion > triggerThreshold.Value.PartsPerMillion && not ventilationIsOn then 
                 toggleRelay 2000 |> Async.Start |> ignore)
-        
         do sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
         let mutable s = sensor.Subscribe(consumer)
-
         base.Run()
