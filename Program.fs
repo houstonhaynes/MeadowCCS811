@@ -19,20 +19,22 @@ type MeadowApp() =
         let sensor = new Ccs811 (i2c)
         let ppm = Units.Concentration.UnitType.PartsPerMillion
         let led = RgbLed(MeadowApp.Device.Pins.OnboardLedRed, 
-                                MeadowApp.Device.Pins.OnboardLedGreen,
-                                MeadowApp.Device.Pins.OnboardLedBlue)
+                        MeadowApp.Device.Pins.OnboardLedGreen,
+                        MeadowApp.Device.Pins.OnboardLedBlue)
         let onboardLEDColor = RgbLedColors.Cyan
         let config = new SpiClockConfiguration(new Meadow.Units.Frequency(48.0, 
-                                    Meadow.Units.Frequency.UnitType.Kilohertz), 
-                                    SpiClockConfiguration.Mode.Mode3)
-        let spiBus = MeadowApp.Device.CreateSpiBus(MeadowApp.Device.Pins.SCK,
-                                    MeadowApp.Device.Pins.MOSI,
-                                    MeadowApp.Device.Pins.MISO,
-                                    config)
-        let display = new Gc9a01 (spiBus, 
-                    MeadowApp.Device.Pins.D02, 
-                    MeadowApp.Device.Pins.D01, 
-                    MeadowApp.Device.Pins.D00)
+                        Meadow.Units.Frequency.UnitType.Kilohertz), 
+                        SpiClockConfiguration.Mode.Mode3)
+        let spiBus = MeadowApp.Device.CreateSpiBus(
+                        MeadowApp.Device.Pins.SCK,
+                        MeadowApp.Device.Pins.MOSI,
+                        MeadowApp.Device.Pins.MISO,
+                        config)
+        let display = new Gc9a01 (
+                        spiBus, 
+                        MeadowApp.Device.Pins.D02, 
+                        MeadowApp.Device.Pins.D01, 
+                        MeadowApp.Device.Pins.D00)
         let displaywidth = Convert.ToInt32(display.Width)
         let displayheight = Convert.ToInt32(display.Height)
         let originX = displaywidth / 2
@@ -51,10 +53,10 @@ type MeadowApp() =
         let mutable projectedCO2Value = Nullable (Units.Concentration(400.0, ppm)) 
         let mutable canvas = MicroGraphics(display)
         let concentrationColor value = match value with
-                                | i when i >= 2000.0 -> Color.Red
-                                | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
-                                | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
-                                | _ -> Color.LightSteelBlue
+                                        | i when i >= 2000.0 -> Color.Red
+                                        | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
+                                        | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
+                                        | _ -> Color.LightSteelBlue
         let mutable updateDisplay = 
             async {
                 let outerCircleColor = concentrationColor projectedCO2Value.Value.PartsPerMillion
@@ -111,15 +113,15 @@ type MeadowApp() =
                 let projectedValue = match previousCO2Value.Value.PartsPerMillion with 
                                         | i when i = 0.0 -> nominalCO2Value
                                         | _ -> Nullable (Units.Concentration((latestCO2Value.Value.PartsPerMillion + 
-                                                        (latestCO2Value.Value.PartsPerMillion - previousCO2Value.Value.PartsPerMillion)), ppm))
+                                         (latestCO2Value.Value.PartsPerMillion - previousCO2Value.Value.PartsPerMillion)), ppm))
                 projectedCO2Value <- Nullable (Units.Concentration(Math.Max(
-                                                projectedValue.Value.PartsPerMillion, 
-                                                nominalCO2Value.Value.PartsPerMillion), ppm))
+                    projectedValue.Value.PartsPerMillion, 
+                    nominalCO2Value.Value.PartsPerMillion), ppm))
             if previousCO2Value.Value.PartsPerMillion <> latestCO2Value.Value.PartsPerMillion then
                 updateDisplay |> Async.RunSynchronously |> ignore 
                 Resolver.Log.Info $"New CO2 value: {latestCO2Value}" |> ignore
             if newValue.Value.PartsPerMillion > triggerThreshold.Value.PartsPerMillion && not ventilationIsOn then 
-                toggleRelay 2000 |> Async.Start |> ignore)
+                toggleRelay 2000 |> Async.Start |> ignore)                                                           
         do sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
         let mutable s = sensor.Subscribe(consumer)
         base.Run()
