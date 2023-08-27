@@ -15,7 +15,7 @@ open Elmish
 
 [<AutoOpen>]
 module Constants = 
-    let onboardLEDColor : Color = Color.Red
+    let onboardLEDColor = Color.Red
     let triggerThreshold = Units.Concentration(750.0, Units.Concentration.UnitType.PartsPerMillion)
     let reductionThreshold = Units.Concentration(650.0, Units.Concentration.UnitType.PartsPerMillion)
     let nominalCO2Value = Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion)
@@ -30,8 +30,7 @@ type Model =
     }
 
 type Msg = 
-    | SetC02Values of current: Units.Concentration Nullable * previous: Units.Concentration Nullable
-    | ToggleRelay of duration: int
+    | SetC02Values of current: Units.Concentration * previous: Units.Concentration * toggleRelay: (int -> Async<unit>)
 
 let init () = 
     {
@@ -43,27 +42,12 @@ let init () =
 
 let update (msg: Msg) (model : Model) = 
     match msg with
-    | SetC02Values (current, previous) -> 
+    | SetC02Values (current, previous, toggleRelay) -> 
         {
             model with 
                 LatestCO2Value = current
                 PreviousCO2Value = previous
         }, Cmd.none
-    | ToggleRelay duration ->
-        printfn "Ventilator ON..."
-        let mutable ventilationIsOn = false
-        while model.LatestCO2Value.PartsPerMillion > reductionThreshold.PartsPerMillion do
-            ventilationIsOn <- true
-            if not relayOne.IsOn then 
-                relayOne.Toggle()
-            if not led.IsOn then
-                led.SetColor(onboardLEDColor, 0.25f)
-            do! Async.Sleep(int (duration))
-        ventilationIsOn <- false
-        relayOne.Toggle()
-        led.SetColor(onboardLEDColor, 0.0f)
-        printfn "Ventilator OFF..." |> ignore
-        model, Cmd.none
 
 type MeadowApp() =
     inherit App<F7FeatherV1>()
@@ -85,7 +69,7 @@ type MeadowApp() =
     let originy = displayheight / 2
 
     let graphics = MicroGraphics(display)
-    let updateDisplay (model: Model) = 
+    let updateDisplay (model: Model) (dispatch: Msg -> unit) = 
         let outerCircleColor = match projectedCO2Value.Value.PartsPerMillion with
                                 | i when i >= 2000.0 -> Color.Red
                                 | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
@@ -142,8 +126,10 @@ type MeadowApp() =
             
             let consumer = Ccs811.CreateObserver(fun result ->
                 let struct (newValue, _) = result.New
-                latestCO2Value <- if newValue.HasValue then newValue.Value else Units.Concentration 0.0
                 let struct (oldValue, _) = result.Old.Value
+                
+                dispatch (SetC02Values (Option.ofNullable newValue, Option.ofNullable oldValue, toggleRelay))
+                
                 if oldValue.HasValue then
                     previousCO2Value <- if oldValue.HasValue then oldValue.Value else Units.Concentration 0.0
                     let projectedValue = Nullable (Units.Concentration((latestCO2Value.PartsPerMillion + 
@@ -156,7 +142,8 @@ type MeadowApp() =
                     updateDisplay model
                     printfn $"New CO2 value: {latestCO2Value}" |> ignore
                 if newValue.Value.PartsPerMillion > triggerThreshold.PartsPerMillion && not ventilationIsOn then 
-                    toggleRelay 3000 |> Async.Start |> ignore)
+                    toggleRelay 3000 |> Async.Start |> ignore
+            )
 
             do sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
             sensor.Subscribe(consumer)
@@ -166,7 +153,7 @@ type MeadowApp() =
         ]
 
     do  
-        Program.mkProgram init update (fun _ _ -> ())
+        Program.mkProgram init update updateDisplay
         |> Program.withSubscription subscriptions
         |> Program.run
 
