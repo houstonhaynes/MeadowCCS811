@@ -30,7 +30,7 @@ type Model =
     }
 
 type Msg = 
-    | SetC02Values of current: Units.Concentration option * previous: Units.Concentration option
+    | SetC02Values of current: Units.Concentration option * previous: Units.Concentration option * toggleVentilator: (bool -> unit)
 
 let init () = 
     {
@@ -42,7 +42,7 @@ let init () =
 
 let update (msg: Msg) (model : Model) = 
     match msg with
-    | SetC02Values (newValue, oldValue) ->
+    | SetC02Values (newValue, oldValue, toggleVentilator) ->
         match newValue, oldValue with
         | Some newValue, None -> 
             { model with
@@ -50,15 +50,15 @@ let update (msg: Msg) (model : Model) =
                 VentilationIsOn = false
             }, Cmd.none
         | Some newValue, Some oldValue -> 
+            let ventilatorEnabled = newValue.PartsPerMillion > reductionThreshold.PartsPerMillion
             { model with 
                 LatestCO2Value = newValue
                 PreviousCO2Value = oldValue
                 ProjectedCO2Value = 
                     Units.Concentration((newValue.PartsPerMillion + (newValue.PartsPerMillion - oldValue.PartsPerMillion)), Units.Concentration.UnitType.PartsPerMillion)
                     |> fun value -> Units.Concentration(Math.Max(value.PartsPerMillion, nominalCO2Value.PartsPerMillion), Units.Concentration.UnitType.PartsPerMillion)
-                VentilationIsOn = newValue.PartsPerMillion > reductionThreshold.PartsPerMillion
-                    
-            }, Cmd.none
+                VentilationIsOn = ventilatorEnabled                    
+            }, Cmd.ofEffect (fun _ -> toggleVentilator ventilatorEnabled)
         | _ -> 
            model, Cmd.none
 
@@ -146,11 +146,8 @@ let main argv =
                 let struct (newValue, _) = result.New
                 let struct (oldValue, _) = result.Old.Value
                 
-                // Feed new values to the model
-                dispatch (SetC02Values (Option.ofNullable newValue, Option.ofNullable oldValue))
-
-                // Toggle ventilator on/off based on the model
-                meadow.ToggleVentilator model.VentilationIsOn
+                // Feed new values and side-effect function to model
+                dispatch (SetC02Values (Option.ofNullable newValue, Option.ofNullable oldValue, meadow.ToggleVentilator))
             )
 
             meadow.Sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
