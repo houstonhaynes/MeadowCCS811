@@ -16,7 +16,7 @@ bin
 .ionide/
 
 # End of https://www.toptal.com/developers/gitignore/api/fsharp
-.vs/MeadowCCS811/DesignTimeBuild/.dtbcache.v2
+*.dtbcache.v2
 *.vsidx
 
 .fake
