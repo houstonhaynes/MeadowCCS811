@@ -42,7 +42,7 @@ let init () =
 
 let update (msg: Msg) (model : Model) = 
     match msg with
-    | SetC02Values (newValue, oldValue) ->         
+    | SetC02Values (newValue, oldValue) ->
         match newValue, oldValue with
         | Some newValue, None -> 
             { model with
@@ -66,7 +66,6 @@ type MeadowApp() =
     inherit App<F7FeatherV1>()
 
     let i2c = MeadowApp.Device.CreateI2cBus(Hardware.I2cBusSpeed.Standard)
-    let sensor = new Ccs811 (i2c)
     let led = RgbPwmLed(MeadowApp.Device.Pins.OnboardLedRed, MeadowApp.Device.Pins.OnboardLedGreen, MeadowApp.Device.Pins.OnboardLedBlue)
     let config = new SpiClockConfiguration((Units.Frequency(48.0, Units.Frequency.UnitType.Kilohertz)), SpiClockConfiguration.Mode.Mode3);
     let spiBus = MeadowApp.Device.CreateSpiBus(MeadowApp.Device.Pins.SCK, MeadowApp.Device.Pins.MOSI, MeadowApp.Device.Pins.MISO, config)
@@ -78,8 +77,11 @@ type MeadowApp() =
     let originy = displayheight / 2
 
     let graphics = MicroGraphics(display)
+    let relayOne = Relays.Relay(MeadowApp.Device.Pins.D05)
 
-    let updateDisplay (model: Model) (dispatch: Msg -> unit) = 
+    member this.Sensor = new Ccs811 (i2c)
+
+    member this.UpdateDisplay (model: Model) (dispatch: Msg -> unit) = 
         // Update display only if CO2 value has changed
         if model.LatestCO2Value.PartsPerMillion <> model.PreviousCO2Value.PartsPerMillion then
             let outerCircleColor = 
@@ -115,9 +117,8 @@ type MeadowApp() =
             graphics.DrawText(172, 150, $"{model.ProjectedCO2Value}", Color.WhiteSmoke, ScaleFactor.X2, HorizontalAlignment.Right)
             graphics.Show()
 
-    let relayOne = Relays.Relay(MeadowApp.Device.Pins.D05)
 
-    let toggleVentilator enabled =
+    member this.ToggleVentilator enabled =
         if enabled then
             printfn "Ventilator ON..."
             if not relayOne.IsOn then 
@@ -132,6 +133,12 @@ type MeadowApp() =
                 led.SetColor(onboardLEDColor, 0.0f)
 
 
+
+[<EntryPoint>]
+let main argv =
+    Console.WriteLine "Starting main..."
+    let meadow = new MeadowApp()
+
     let subscriptions (model: Model) : Sub<Msg> =      
         let sensorSubscription (dispatch: Msg -> unit) = 
             
@@ -139,26 +146,23 @@ type MeadowApp() =
                 let struct (newValue, _) = result.New
                 let struct (oldValue, _) = result.Old.Value
                 
+                // Feed new values to the model
                 dispatch (SetC02Values (Option.ofNullable newValue, Option.ofNullable oldValue))
-                
-                toggleVentilator model.VentilationIsOn
+
+                // Toggle ventilator on/off based on the model
+                meadow.ToggleVentilator model.VentilationIsOn
             )
 
-            do sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
-            sensor.Subscribe(consumer)
+            meadow.Sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
+            meadow.Sensor.Subscribe(consumer)
 
         [
             [ nameof sensorSubscription ], sensorSubscription
         ]
 
-    do  
-        Program.mkProgram init update updateDisplay
-        |> Program.withSubscription subscriptions
-        |> Program.run
+    Program.mkProgram init update meadow.UpdateDisplay
+    |> Program.withSubscription subscriptions
+    |> Program.run
 
-[<EntryPoint>]
-let main argv =
-    Console.WriteLine "Starting main..."
-    let app = new MeadowApp()
     Threading.Thread.Sleep(System.Threading.Timeout.Infinite)
     0 // return an integer exit code
