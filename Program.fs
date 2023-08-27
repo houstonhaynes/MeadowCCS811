@@ -1,3 +1,5 @@
+module MeadowProgram
+
 open System
 open System.Resources
 open Meadow
@@ -9,6 +11,59 @@ open Meadow.Foundation.Displays
 open Meadow.Foundation.Leds
 open Meadow.Hardware
 open SimpleJpegDecoder
+open Elmish
+
+[<AutoOpen>]
+module Constants = 
+    let onboardLEDColor : Color = Color.Red
+    let triggerThreshold = Units.Concentration(750.0, Units.Concentration.UnitType.PartsPerMillion)
+    let reductionThreshold = Units.Concentration(650.0, Units.Concentration.UnitType.PartsPerMillion)
+    let nominalCO2Value = Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion)
+    let maximumCO2Value = Units.Concentration(4000.0, Units.Concentration.UnitType.PartsPerMillion)
+
+type Model = 
+    {
+        LatestCO2Value: Units.Concentration
+        PreviousCO2Value: Units.Concentration
+        ProjectedCO2Value: Units.Concentration
+        VentilationIsOn: bool
+    }
+
+type Msg = 
+    | SetC02Values of current: Units.Concentration Nullable * previous: Units.Concentration Nullable
+    | ToggleRelay of duration: int
+
+let init () = 
+    {
+        LatestCO2Value = Units.Concentration(0.0, Units.Concentration.UnitType.PartsPerMillion)
+        PreviousCO2Value = Units.Concentration(0.0, Units.Concentration.UnitType.PartsPerMillion)
+        ProjectedCO2Value = Units.Concentration(0.0, Units.Concentration.UnitType.PartsPerMillion)
+        VentilationIsOn = false
+    }, Cmd.none
+
+let update (msg: Msg) (model : Model) = 
+    match msg with
+    | SetC02Values (current, previous) -> 
+        {
+            model with 
+                LatestCO2Value = current
+                PreviousCO2Value = previous
+        }, Cmd.none
+    | ToggleRelay duration ->
+        printfn "Ventilator ON..."
+        let mutable ventilationIsOn = false
+        while model.LatestCO2Value.PartsPerMillion > reductionThreshold.PartsPerMillion do
+            ventilationIsOn <- true
+            if not relayOne.IsOn then 
+                relayOne.Toggle()
+            if not led.IsOn then
+                led.SetColor(onboardLEDColor, 0.25f)
+            do! Async.Sleep(int (duration))
+        ventilationIsOn <- false
+        relayOne.Toggle()
+        led.SetColor(onboardLEDColor, 0.0f)
+        printfn "Ventilator OFF..." |> ignore
+        model, Cmd.none
 
 type MeadowApp() =
     inherit App<F7FeatherV1>()
@@ -16,13 +71,8 @@ type MeadowApp() =
     let sensor = new Ccs811 (i2c)
     let led = RgbPwmLed(MeadowApp.Device.Pins.OnboardLedRed, MeadowApp.Device.Pins.OnboardLedGreen,
                 MeadowApp.Device.Pins.OnboardLedBlue)
-    let mutable onboardLEDColor : Color = Color.Red
-    let triggerThreshold = Nullable (Units.Concentration(750.0, Units.Concentration.UnitType.PartsPerMillion))
-    let reductionThreshold = Nullable (Units.Concentration(650.0, Units.Concentration.UnitType.PartsPerMillion))
-    let nominalCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
-    let maximumCO2Value = Nullable (Units.Concentration(4000.0, Units.Concentration.UnitType.PartsPerMillion))
-    let mutable latestCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
-    let mutable previousCO2Value = Nullable (Units.Concentration(0.0, Units.Concentration.UnitType.PartsPerMillion))
+    let mutable latestCO2Value = Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion)
+    let mutable previousCO2Value = Units.Concentration(0.0, Units.Concentration.UnitType.PartsPerMillion)
     let mutable projectedCO2Value = Nullable (Units.Concentration(400.0, Units.Concentration.UnitType.PartsPerMillion))
 
     let config = new SpiClockConfiguration((Units.Frequency(48.0, Units.Frequency.UnitType.Kilohertz)), SpiClockConfiguration.Mode.Mode3);
@@ -34,49 +84,46 @@ type MeadowApp() =
     let originx = displaywidth / 2
     let originy = displayheight / 2
 
-    let mutable graphics = MicroGraphics(display)
-    let mutable updateDisplay = 
-        async {
+    let graphics = MicroGraphics(display)
+    let updateDisplay (model: Model) = 
+        let outerCircleColor = match projectedCO2Value.Value.PartsPerMillion with
+                                | i when i >= 2000.0 -> Color.Red
+                                | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
+                                | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
+                                | _ -> Color.LightSteelBlue
 
-            let outerCircleColor = match projectedCO2Value.Value.PartsPerMillion with
-                                    | i when i >= 2000.0 -> Color.Red
-                                    | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
-                                    | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
-                                    | _ -> Color.LightSteelBlue
+        let centerCircleColor = match latestCO2Value.PartsPerMillion with
+                                | i when i >= 2000.0 -> Color.Red
+                                | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
+                                | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
+                                | _ -> Color.LightSteelBlue
 
-            let centerCircleColor = match latestCO2Value.Value.PartsPerMillion with
-                                    | i when i >= 2000.0 -> Color.Red
-                                    | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
-                                    | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
-                                    | _ -> Color.LightSteelBlue
+        graphics.CurrentFont <- Font12x16()
+        graphics.Rotation <- RotationType._180Degrees
+        graphics.Clear(false)
+        graphics.DrawCircle(originx, originy, 115, outerCircleColor, true, true)
+        graphics.DrawCircle(originx, originy, 90, Color.Black, true, true)
+        graphics.DrawCircle(originx, originy, 80, centerCircleColor, true, true)
+        graphics.DrawRoundedRectangle(48, 97, 145, 45, 8, Color.Black, true)
+        graphics.DrawText(120, 98, $"{latestCO2Value}", Color.WhiteSmoke, ScaleFactor.X3, HorizontalAlignment.Center)
+        graphics.DrawRoundedRectangle(63, 68, 115, 24, 6, Color.Black, true)
+        graphics.DrawRoundedRectangle(63, 145, 55, 24, 6, Color.Black, true)
+        graphics.DrawRoundedRectangle(121, 145, 55, 24, 6, Color.Black, true)
+        graphics.DrawRoundedRectangle(104, 172, 32, 32, 8, Color.Black, true)
+        graphics.CurrentFont <- Font6x8()
+        graphics.DrawText(67, 73, $"Breathe", Color.LightSeaGreen, ScaleFactor.X2, HorizontalAlignment.Left)            
+        graphics.DrawText(175, 73, $"EZ", Color.DeepPink, ScaleFactor.X2, HorizontalAlignment.Right)
+        graphics.DrawText(115, 150, $"{previousCO2Value}", Color.WhiteSmoke, ScaleFactor.X2, HorizontalAlignment.Right)
+        graphics.DrawText(172, 150, $"{projectedCO2Value}", Color.WhiteSmoke, ScaleFactor.X2, HorizontalAlignment.Right)
+        graphics.Show()
 
-            graphics.CurrentFont <- Font12x16()
-            graphics.Rotation <- RotationType._180Degrees
-            graphics.Clear(false)
-            graphics.DrawCircle(originx, originy, 115, outerCircleColor, true, true)
-            graphics.DrawCircle(originx, originy, 90, Color.Black, true, true)
-            graphics.DrawCircle(originx, originy, 80, centerCircleColor, true, true)
-            graphics.DrawRoundedRectangle(48, 97, 145, 45, 8, Color.Black, true)
-            graphics.DrawText(120, 98, $"{latestCO2Value}", Color.WhiteSmoke, ScaleFactor.X3, HorizontalAlignment.Center)
-            graphics.DrawRoundedRectangle(63, 68, 115, 24, 6, Color.Black, true)
-            graphics.DrawRoundedRectangle(63, 145, 55, 24, 6, Color.Black, true)
-            graphics.DrawRoundedRectangle(121, 145, 55, 24, 6, Color.Black, true)
-            graphics.DrawRoundedRectangle(104, 172, 32, 32, 8, Color.Black, true)
-            graphics.CurrentFont <- Font6x8()
-            graphics.DrawText(67, 73, $"Breathe", Color.LightSeaGreen, ScaleFactor.X2, HorizontalAlignment.Left)            
-            graphics.DrawText(175, 73, $"EZ", Color.DeepPink, ScaleFactor.X2, HorizontalAlignment.Right)
-            graphics.DrawText(115, 150, $"{previousCO2Value}", Color.WhiteSmoke, ScaleFactor.X2, HorizontalAlignment.Right)
-            graphics.DrawText(172, 150, $"{projectedCO2Value}", Color.WhiteSmoke, ScaleFactor.X2, HorizontalAlignment.Right)
-            graphics.Show()
-        }
-
-    let mutable relayOne = Relays.Relay(MeadowApp.Device.Pins.D05)
+    let relayOne = Relays.Relay(MeadowApp.Device.Pins.D05)
     let mutable ventilationIsOn = false
 
     let toggleRelay duration =
         async {
             printfn "Ventilator ON..."
-            while latestCO2Value.Value.PartsPerMillion > reductionThreshold.Value.PartsPerMillion do
+            while latestCO2Value.PartsPerMillion > reductionThreshold.PartsPerMillion do
                 ventilationIsOn <- true
                 if not relayOne.IsOn then 
                     relayOne.Toggle()
@@ -89,26 +136,39 @@ type MeadowApp() =
             printfn "Ventilator OFF..." |> ignore
         }
 
-    let consumer = Ccs811.CreateObserver(fun result ->
-        let newValue = match result.New with | (co2, _) -> co2
-        latestCO2Value <- newValue
-        let oldValue = match result.Old.Value with | (co2 , _) -> co2
-        if oldValue.HasValue then
-            previousCO2Value <- oldValue
-            let projectedValue = Nullable (Units.Concentration((latestCO2Value.Value.PartsPerMillion + 
-                                                                (latestCO2Value.Value.PartsPerMillion - previousCO2Value.Value.PartsPerMillion)), 
-                                                                Units.Concentration.UnitType.PartsPerMillion))
-            projectedCO2Value <- Nullable (Units.Concentration(Math.Max(projectedValue.Value.PartsPerMillion, nominalCO2Value.Value.PartsPerMillion), 
-                                                                Units.Concentration.UnitType.PartsPerMillion))
 
-        if previousCO2Value.Value.PartsPerMillion <> latestCO2Value.Value.PartsPerMillion then
-            updateDisplay |> Async.RunSynchronously |> ignore 
-            printfn $"New CO2 value: {latestCO2Value}" |> ignore
-        if newValue.Value.PartsPerMillion > triggerThreshold.Value.PartsPerMillion && not ventilationIsOn then 
-            toggleRelay 3000 |> Async.Start |> ignore)
+    let subscriptions (model: Model) : Sub<Msg> =      
+        let sensorSubscription (dispatch: Msg -> unit) = 
+            
+            let consumer = Ccs811.CreateObserver(fun result ->
+                let struct (newValue, _) = result.New
+                latestCO2Value <- if newValue.HasValue then newValue.Value else Units.Concentration 0.0
+                let struct (oldValue, _) = result.Old.Value
+                if oldValue.HasValue then
+                    previousCO2Value <- if oldValue.HasValue then oldValue.Value else Units.Concentration 0.0
+                    let projectedValue = Nullable (Units.Concentration((latestCO2Value.PartsPerMillion + 
+                                                                        (latestCO2Value.PartsPerMillion - previousCO2Value.PartsPerMillion)), 
+                                                                        Units.Concentration.UnitType.PartsPerMillion))
+                    projectedCO2Value <- Nullable (Units.Concentration(Math.Max(projectedValue.Value.PartsPerMillion, nominalCO2Value.PartsPerMillion), 
+                                                                        Units.Concentration.UnitType.PartsPerMillion))
 
-    do sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
-    let mutable s = sensor.Subscribe(consumer)
+                if previousCO2Value.PartsPerMillion <> latestCO2Value.PartsPerMillion then
+                    updateDisplay model
+                    printfn $"New CO2 value: {latestCO2Value}" |> ignore
+                if newValue.Value.PartsPerMillion > triggerThreshold.PartsPerMillion && not ventilationIsOn then 
+                    toggleRelay 3000 |> Async.Start |> ignore)
+
+            do sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
+            sensor.Subscribe(consumer)
+
+        [
+            [ nameof sensorSubscription ], sensorSubscription
+        ]
+
+    do  
+        Program.mkProgram init update (fun _ _ -> ())
+        |> Program.withSubscription subscriptions
+        |> Program.run
 
 [<EntryPoint>]
 let main argv =
