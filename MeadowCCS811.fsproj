@@ -13,6 +13,7 @@
     <EmbeddedResource Include="arrow-down.jpg" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Elmish" Version="4.0.2" />
     <PackageReference Include="Meadow" Version="1.0.2.1" />
     <PackageReference Include="Meadow.Foundation" Version="1.0.2.1" />
     <PackageReference Include="Meadow.F7" Version="1.0.2.1" />
