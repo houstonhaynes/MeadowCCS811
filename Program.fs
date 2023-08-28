@@ -50,7 +50,7 @@ let update (msg: Msg) (model : Model) =
                 VentilationIsOn = false
             }, Cmd.none
         | Some newValue, Some oldValue -> 
-            let ventilatorEnabled = newValue.PartsPerMillion > reductionThreshold.PartsPerMillion
+            let ventilatorEnabled = newValue.PartsPerMillion > triggerThreshold.PartsPerMillion
             { model with 
                 LatestCO2Value = newValue
                 PreviousCO2Value = oldValue
