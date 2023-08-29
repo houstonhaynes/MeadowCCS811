@@ -45,10 +45,11 @@ let update (msg: Msg) (model : Model) =
     | SetC02Values (newValue, oldValue, toggleVentilator) ->
         match newValue, oldValue with
         | Some newValue, None -> 
+            let ventilatorEnabled = newValue.PartsPerMillion > triggerThreshold.PartsPerMillion
             { model with
                 LatestCO2Value = newValue
-                VentilationIsOn = false
-            }, Cmd.none
+                VentilationIsOn = ventilatorEnabled
+            }, Cmd.ofEffect (fun _ -> toggleVentilator ventilatorEnabled)
         | Some newValue, Some oldValue -> 
             let ventilatorEnabled = newValue.PartsPerMillion > triggerThreshold.PartsPerMillion
             { model with 
