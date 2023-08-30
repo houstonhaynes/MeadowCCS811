@@ -166,7 +166,7 @@ type MeadowApp() =
                     Resolver.Log.Info "Ventilator OFF..."
                     relayOne.Toggle()
                 if led.IsOn then
-                    led.SetColor(onboardLEDColor)
+                    led.IsOn <- false
                             
         let subscriptions (model: Model) : Sub<Msg> =      
             let sensorSubscription (dispatch: Msg -> unit) = 
