@@ -43,15 +43,22 @@ let init () =
 let update (msg: Msg) (model : Model) = 
     match msg with
     | SetC02Values (newValue, oldValue, toggleVentilator) ->
+        
+        let calculateVentEnabled (newValue: Units.Concentration) = 
+            let startVent = newValue.PartsPerMillion > triggerThreshold.PartsPerMillion
+            let continueVent = model.VentilationIsOn && newValue.PartsPerMillion > reductionThreshold.PartsPerMillion
+            startVent || continueVent
+
         match newValue, oldValue with
         | Some newValue, None -> 
-            let ventilatorEnabled = newValue.PartsPerMillion > triggerThreshold.PartsPerMillion
+            let ventEnabled = calculateVentEnabled newValue
             { model with
                 LatestCO2Value = newValue
-                VentilationIsOn = ventilatorEnabled
-            }, Cmd.ofEffect (fun _ -> toggleVentilator ventilatorEnabled)
+                VentilationIsOn = ventEnabled
+            }, Cmd.ofEffect (fun _ -> toggleVentilator ventEnabled)
+
         | Some newValue, Some oldValue -> 
-            let ventilatorEnabled = newValue.PartsPerMillion > triggerThreshold.PartsPerMillion
+            let ventEnabled = calculateVentEnabled newValue
             { model with 
                 LatestCO2Value = newValue
                 PreviousCO2Value = oldValue
@@ -61,8 +68,8 @@ let update (msg: Msg) (model : Model) =
                         | i when i = 0.0 -> nominalCO2Value
                         | _ -> ppm ((newValue.PartsPerMillion + (newValue.PartsPerMillion - oldValue.PartsPerMillion)))
                     ppm (Math.Max(projectedValue.PartsPerMillion, nominalCO2Value.PartsPerMillion))
-                VentilationIsOn = ventilatorEnabled                    
-            }, Cmd.ofEffect (fun _ -> toggleVentilator ventilatorEnabled)
+                VentilationIsOn = ventEnabled
+            }, Cmd.ofEffect (fun _ -> toggleVentilator ventEnabled)
         | _ -> 
            model, Cmd.none
 
@@ -149,18 +156,18 @@ type MeadowApp() =
 
         let toggleVentilator enabled =
             if enabled then
-                Resolver.Log.Info "Ventilator ON..."
                 if not relayOne.IsOn then 
+                    Resolver.Log.Info "Ventilator ON..."
                     relayOne.Toggle()
                 if not led.IsOn then
                     led.SetColor(onboardLEDColor)               
             else 
-                Resolver.Log.Info "Ventilator OFF..."
                 if relayOne.IsOn then
+                    Resolver.Log.Info "Ventilator OFF..."
                     relayOne.Toggle()
                 if led.IsOn then
                     led.SetColor(onboardLEDColor)
-        
+                            
         let subscriptions (model: Model) : Sub<Msg> =      
             let sensorSubscription (dispatch: Msg -> unit) = 
                 let consumer = Ccs811.CreateObserver(fun result ->
