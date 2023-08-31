@@ -12,62 +12,62 @@ open Meadow.Foundation.Sensors.Atmospheric
 open Meadow.Foundation.Leds
 open Elmish
 
-let ppm value = Units.Concentration(value, Units.Concentration.UnitType.PartsPerMillion)
+let ppb value = Units.Concentration(value, Units.Concentration.UnitType.PartsPerBillion)
 
 [<AutoOpen>]
 module Constants = 
     let onboardLEDColor = RgbLedColors.Cyan
-    let triggerThreshold = ppm 750.0
-    let reductionThreshold = ppm 650.0
-    let nominalCO2Value = ppm 400.0
+    let triggerThreshold = ppb 50.0
+    let reductionThreshold = ppb 25.0
+    let nominalVOCValue = ppb 0.0
 
 type Model = 
     {
-        LatestCO2Value: Units.Concentration
-        PreviousCO2Value: Units.Concentration
-        ProjectedCO2Value: Units.Concentration
+        LatestVOCValue: Units.Concentration
+        PreviousVOCValue: Units.Concentration
+        ProjectedVOCValue: Units.Concentration
         VentilationIsOn: bool
     }
 
 type Msg = 
-    | SetC02Values of current: Units.Concentration option * previous: Units.Concentration option * toggleVentilator: (bool -> unit)
+    | SetVOCValues of current: Units.Concentration option * previous: Units.Concentration option * toggleVentilator: (bool -> unit)
 
 let init () = 
     {
-        LatestCO2Value = ppm 0.0
-        PreviousCO2Value = ppm 0.0
-        ProjectedCO2Value = ppm 0.0
+        LatestVOCValue = ppb 0.0
+        PreviousVOCValue = ppb 0.0
+        ProjectedVOCValue = ppb 0.0
         VentilationIsOn = false
     }, Cmd.none
 
 let update (msg: Msg) (model : Model) = 
     match msg with
-    | SetC02Values (newValue, oldValue, toggleVentilator) ->
+    | SetVOCValues (newValue, oldValue, toggleVentilator) ->
         
         let calculateVentEnabled (newValue: Units.Concentration) = 
-            let startVent = newValue.PartsPerMillion > triggerThreshold.PartsPerMillion
-            let continueVent = model.VentilationIsOn && newValue.PartsPerMillion > reductionThreshold.PartsPerMillion
+            let startVent = newValue.PartsPerBillion > triggerThreshold.PartsPerBillion
+            let continueVent = model.VentilationIsOn && newValue.PartsPerBillion > reductionThreshold.PartsPerBillion
             startVent || continueVent
 
         match newValue, oldValue with
         | Some newValue, None -> 
             let ventEnabled = calculateVentEnabled newValue
             { model with
-                LatestCO2Value = newValue
+                LatestVOCValue = newValue
                 VentilationIsOn = ventEnabled
             }, Cmd.ofEffect (fun _ -> toggleVentilator ventEnabled)
 
         | Some newValue, Some oldValue -> 
             let ventEnabled = calculateVentEnabled newValue
             { model with 
-                LatestCO2Value = newValue
-                PreviousCO2Value = oldValue
-                ProjectedCO2Value = 
+                LatestVOCValue = newValue
+                PreviousVOCValue = oldValue
+                ProjectedVOCValue = 
                     let projectedValue = 
-                        match oldValue.PartsPerMillion with 
-                        | i when i = 0.0 -> nominalCO2Value
-                        | _ -> ppm ((newValue.PartsPerMillion + (newValue.PartsPerMillion - oldValue.PartsPerMillion)))
-                    ppm (Math.Max(projectedValue.PartsPerMillion, nominalCO2Value.PartsPerMillion))
+                        match oldValue.PartsPerBillion with 
+                        | i when i = 0.0 -> nominalVOCValue
+                        | _ -> ppb ((newValue.PartsPerBillion + (newValue.PartsPerBillion - oldValue.PartsPerBillion)))
+                    ppb (Math.Max(projectedValue.PartsPerBillion, nominalVOCValue.PartsPerBillion))
                 VentilationIsOn = ventEnabled
             }, Cmd.ofEffect (fun _ -> toggleVentilator ventEnabled)
         | _ -> 
@@ -114,21 +114,21 @@ type MeadowApp() =
         let canvas = MicroGraphics(display)
         let concentrationColor value = 
             match value with
-            | i when i >= 2000.0 -> Color.Red
-            | i when i >= 1000.0 && i < 2000.0 -> Color.DarkOrange
-            | i when i >= 650.0 && i < 1000.0 -> Color.BurlyWood
+            | i when i >= 500.0 -> Color.Red
+            | i when i >= 200.0 && i < 500.0 -> Color.DarkOrange
+            | i when i >= 50.0 && i < 200.0 -> Color.BurlyWood
             | _ -> Color.LightSteelBlue
 
         let updateDisplay (model: Model) (dispatch: Msg -> unit) = 
-            // Update canvas if the CO2 value has changed
-            if model.PreviousCO2Value.PartsPerMillion <> model.LatestCO2Value.PartsPerMillion then
-                Resolver.Log.Info $"New CO2 value: {model.LatestCO2Value.PartsPerMillion}" |> ignore
+            // Update canvas if the VOC value has changed
+            if model.PreviousVOCValue.PartsPerBillion <> model.LatestVOCValue.PartsPerBillion then
+                Resolver.Log.Info $"New VOC value: {model.LatestVOCValue.PartsPerBillion}" |> ignore
                 
-                let outerCircleColor = concentrationColor model.ProjectedCO2Value.PartsPerMillion
-                let centerCircleColor = concentrationColor model.LatestCO2Value.PartsPerMillion
-                let previousValueColor = concentrationColor model.PreviousCO2Value.PartsPerMillion
+                let outerCircleColor = concentrationColor model.ProjectedVOCValue.PartsPerBillion
+                let centerCircleColor = concentrationColor model.LatestVOCValue.PartsPerBillion
+                let previousValueColor = concentrationColor model.PreviousVOCValue.PartsPerBillion
                 let directionImage = 
-                    if model.LatestCO2Value.PartsPerMillion > model.PreviousCO2Value.PartsPerMillion
+                    if model.LatestVOCValue.PartsPerBillion > model.PreviousVOCValue.PartsPerBillion
                     then upBmpImage
                     else dnBmpImage
 
@@ -139,7 +139,7 @@ type MeadowApp() =
                 canvas.DrawCircle(originX, originY, 90, Color.Black, true, true)
                 canvas.DrawCircle(originX, originY, 80, centerCircleColor, true, true)
                 canvas.DrawRoundedRectangle(48, 97, 145, 45, 8, Color.Black, true)
-                canvas.DrawText(120, 98, $"{model.LatestCO2Value}", centerCircleColor, ScaleFactor.X3, HorizontalAlignment.Center)
+                canvas.DrawText(120, 98, $"{model.LatestVOCValue.PartsPerBillion}", centerCircleColor, ScaleFactor.X3, HorizontalAlignment.Center)
                 canvas.DrawRoundedRectangle(62, 68, 115, 24, 6, Color.Black, true)
                 canvas.DrawRoundedRectangle(62, 145, 55, 24, 6, Color.Black, true)
                 canvas.DrawRoundedRectangle(120, 143, 55, 24, 6, Color.Black, true)
@@ -147,8 +147,8 @@ type MeadowApp() =
                 canvas.CurrentFont <- Font6x8()
                 canvas.DrawText(67, 73, $"Breathe", Color.LightSeaGreen, ScaleFactor.X2, HorizontalAlignment.Left)            
                 canvas.DrawText(175, 73, $"EZ", Color.DeepPink, ScaleFactor.X2, HorizontalAlignment.Right)
-                canvas.DrawText(115, 150, $"{model.PreviousCO2Value}", previousValueColor, ScaleFactor.X2, HorizontalAlignment.Right)
-                canvas.DrawText(172, 150, $"{model.ProjectedCO2Value}", outerCircleColor, ScaleFactor.X2, HorizontalAlignment.Right)
+                canvas.DrawText(115, 150, $"{model.PreviousVOCValue.PartsPerBillion}", previousValueColor, ScaleFactor.X2, HorizontalAlignment.Right)
+                canvas.DrawText(172, 150, $"{model.ProjectedVOCValue.PartsPerBillion}", outerCircleColor, ScaleFactor.X2, HorizontalAlignment.Right)
                 canvas.DrawImage (104, 174, directionImage)
                 canvas.Show()
         
@@ -173,15 +173,15 @@ type MeadowApp() =
                 let consumer = Ccs811.CreateObserver(fun result ->
                     let newValue = 
                         match result.New with 
-                        | struct (newValue, _) -> newValue |> Option.ofNullable
+                        | struct (_, newValue) -> newValue |> Option.ofNullable
 
                     let oldValue = 
                         match result.Old |> Option.ofNullable with
-                        | Some struct (oldValue, _) -> oldValue |> Option.ofNullable
+                        | Some struct (_, oldValue) -> oldValue |> Option.ofNullable
                         | None -> None
 
                     // Feed new values and side-effect function to model
-                    dispatch (SetC02Values (newValue, oldValue, toggleVentilator))
+                    dispatch (SetVOCValues (newValue, oldValue, toggleVentilator))
                 )
 
                 sensor.StartUpdating(TimeSpan.FromSeconds(2.0))
